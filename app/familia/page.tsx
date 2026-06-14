@@ -1,5 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import Link from 'next/link'
+import PagarButton from './mensualidades/PagarButton'
+import InfoPagoButton from './InfoPagoButton'
 
 function calcularEdad(fecha: string) {
   const hoy = new Date()
@@ -16,6 +19,21 @@ export default async function FamiliaHomePage() {
 
   const ahora = new Date()
   const periodo = `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, '0')}`
+
+  const service = createServiceClient()
+  const { data: configPagos } = await service
+    .from('config_pagos')
+    .select('wompi_pub_key')
+    .eq('escuela_id', perfil!.escuela_id)
+    .maybeSingle()
+
+  const { data: escuela } = await supabase
+    .from('escuelas')
+    .select('info_pago')
+    .eq('id', perfil!.escuela_id)
+    .single()
+
+  const tieneWompi = !!configPagos?.wompi_pub_key
 
   const [{ data: alumnas }, { data: mensualidad }] = await Promise.all([
     supabase.from('alumnas')
@@ -58,10 +76,18 @@ export default async function FamiliaHomePage() {
             {mensualidad.estado === 'pagado' ? (
               <span className="bg-green-500/20 text-green-400 text-sm font-medium px-4 py-2 rounded-lg">✓ Pagado</span>
             ) : (
-              <Link href="/familia/mensualidades"
-                className="bg-[#e91e8c] hover:bg-[#ff3da8] text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
-                Ver detalle
-              </Link>
+              <div className="flex flex-col gap-2 items-end">
+                {tieneWompi && <PagarButton mensualidadId={mensualidad.id} />}
+                {escuela?.info_pago && (
+                  <InfoPagoButton info={escuela.info_pago} />
+                )}
+                {!tieneWompi && !escuela?.info_pago && (
+                  <Link href="/familia/mensualidades"
+                    className="bg-[#e91e8c] hover:bg-[#ff3da8] text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
+                    Ver detalle
+                  </Link>
+                )}
+              </div>
             )}
           </div>
         </div>
