@@ -69,7 +69,7 @@ export default function MensualidadesClient({ escuela, mensualidades: inicial, p
     setMensualidades(mensualidades.map(x => x.id === m.id ? { ...x, estado: 'pagado' } : x))
   }
 
-  const [mes, anio] = periodoFiltro.split('-').map(Number)
+  const [anio, mes] = periodoFiltro.split('-').map(Number)
 
   return (
     <div>

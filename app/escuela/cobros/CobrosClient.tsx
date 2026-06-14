@@ -45,7 +45,7 @@ export default function CobrosClient({ escuela, mensualidades: inicial, eventos:
   // ─── Mensualidades ────────────────────────────────────────────
   const periodos = [...new Set(mensualidades.map(m => m.periodo))].sort().reverse()
   const filtradas = mensualidades.filter(m => m.periodo === periodoFiltro)
-  const [mesNum, anio] = periodoFiltro.split('-').map(Number)
+  const [anio, mesNum] = periodoFiltro.split('-').map(Number)
 
   const stats = {
     total: filtradas.length,
