@@ -11,7 +11,7 @@ type ActividadExtra = { id: string; nombre: string; precio: number; es_recurrent
 type AlumnaActividad = { id: string; actividades_extra: ActividadExtra | ActividadExtra[] }
 type Alumna = {
   id: string; nombre: string; documento: string | null; fecha_nacimiento: string | null
-  foto_url: string | null; activa: boolean; notas: string | null
+  foto_url: string | null; activa: boolean; congelada: boolean; notas: string | null
   alumna_grupo: AlumnaGrupo[]
   alumna_actividad?: AlumnaActividad[]
 }
@@ -149,6 +149,11 @@ export default function FamiliaDetalleClient({
       return { ...a, alumna_grupo: [...updatedGrupos, data.alumna_grupo] }
     }))
     cerrar(); setLoading(false)
+  }
+
+  async function toggleCongelar(a: Alumna) {
+    await supabase.from('alumnas').update({ congelada: !a.congelada }).eq('id', a.id)
+    setAlumnas(alumnas.map(x => x.id === a.id ? { ...x, congelada: !a.congelada } : x))
   }
 
   async function toggleActividad(alumna: Alumna, actividad: ActividadExtra) {
@@ -343,7 +348,7 @@ export default function FamiliaDetalleClient({
               })()
 
             return (
-              <div key={a.id} className="bg-white/5 border border-white/10 rounded-xl overflow-hidden">
+              <div key={a.id} className={`border rounded-xl overflow-hidden transition-colors ${a.congelada ? 'bg-blue-900/10 border-blue-500/20' : 'bg-white/5 border-white/10'}`}>
                 {/* Header alumna */}
                 <div className="px-5 py-4 flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -361,11 +366,16 @@ export default function FamiliaDetalleClient({
                           : gasActivos.map(ag => `${ag.grupos.nombre}${ag.grupos.es_elite ? ' ⭐' : ''}`).join(' + ')
                         }
                       </p>
-                      {valorMensual > 0 && (
-                        <p className="text-[#e91e8c] text-xs font-medium mt-0.5">
-                          ${valorMensual.toLocaleString('es-CO')}/mes
-                        </p>
-                      )}
+                      <div className="flex items-center gap-2 mt-0.5">
+                        {valorMensual > 0 && (
+                          <p className="text-[#e91e8c] text-xs font-medium">
+                            ${valorMensual.toLocaleString('es-CO')}/mes
+                          </p>
+                        )}
+                        {a.congelada && (
+                          <span className="text-xs text-blue-400 font-medium">❄ Congelada</span>
+                        )}
+                      </div>
                     </div>
                   </div>
                   <div className="flex gap-1 flex-wrap justify-end">
@@ -387,6 +397,10 @@ export default function FamiliaDetalleClient({
                         Actividades {actsAlumna.length > 0 ? `(${actsAlumna.length})` : ''}
                       </button>
                     )}
+                    <button onClick={() => toggleCongelar(a)}
+                      className={`text-xs transition-colors px-2 py-1 rounded ${a.congelada ? 'text-blue-400 hover:text-white hover:bg-white/5' : 'text-white/40 hover:text-blue-400 hover:bg-blue-500/10'}`}>
+                      {a.congelada ? '❄ Descongelar' : 'Congelar'}
+                    </button>
                     <button onClick={() => abrirEditar(a)}
                       className="text-xs text-white/40 hover:text-white transition-colors px-2 py-1 rounded hover:bg-white/5">
                       Editar
