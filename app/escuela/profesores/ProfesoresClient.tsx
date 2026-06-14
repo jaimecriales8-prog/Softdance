@@ -6,6 +6,7 @@ type Grupo = { id: string; nombre: string; es_elite: boolean }
 type Actividad = { id: string; nombre: string }
 type Profesor = {
   id: string; nombre: string; telefono: string | null; email: string | null; activa: boolean
+  user_id: string | null
   grupo_profesor: { grupo_id: string; grupos: Grupo }[]
   actividad_profesor: { actividad_id: string; actividades_extra: Actividad }[]
 }
@@ -25,6 +26,10 @@ export default function ProfesoresClient({ profesores: inicial, grupos, activida
   const [error, setError] = useState('')
   const [seleccionado, setSeleccionado] = useState<Profesor | null>(null)
   const [asignando, setAsignando] = useState(false)
+  const [modalUsuario, setModalUsuario] = useState(false)
+  const [formUsuario, setFormUsuario] = useState({ email: '', password: '' })
+  const [loadingUsuario, setLoadingUsuario] = useState(false)
+  const [errorUsuario, setErrorUsuario] = useState('')
 
   function abrirCrear() { setForm(EMPTY); setEditId(null); setError(''); setModal('crear') }
   function abrirEditar(p: Profesor) {
@@ -98,6 +103,37 @@ export default function ProfesoresClient({ profesores: inicial, grupos, activida
     setSeleccionado(updated)
     setProfesores(profesores.map(p => p.id === seleccionado.id ? updated : p))
     setAsignando(false)
+  }
+
+  async function crearUsuario(e: React.FormEvent) {
+    e.preventDefault()
+    if (!seleccionado) return
+    setLoadingUsuario(true); setErrorUsuario('')
+    const res = await fetch('/api/escuela/profesores/crear-usuario', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ profesor_id: seleccionado.id, ...formUsuario }),
+    })
+    const data = await res.json()
+    if (!res.ok) { setErrorUsuario(data.error ?? 'Error'); setLoadingUsuario(false); return }
+    const updated = { ...seleccionado, email: formUsuario.email, user_id: 'created' }
+    setSeleccionado(updated)
+    setProfesores(profesores.map(p => p.id === seleccionado.id ? updated : p))
+    setModalUsuario(false); setFormUsuario({ email: '', password: '' }); setLoadingUsuario(false)
+  }
+
+  async function eliminarUsuario() {
+    if (!seleccionado) return
+    setLoadingUsuario(true)
+    await fetch('/api/escuela/profesores/crear-usuario', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ profesor_id: seleccionado.id }),
+    })
+    const updated = { ...seleccionado, user_id: null }
+    setSeleccionado(updated)
+    setProfesores(profesores.map(p => p.id === seleccionado.id ? updated : p))
+    setLoadingUsuario(false)
   }
 
   const gruposAsignados = new Set(seleccionado?.grupo_profesor.map(gp => gp.grupo_id) ?? [])
@@ -216,7 +252,7 @@ export default function ProfesoresClient({ profesores: inicial, grupos, activida
             </div>
 
             {/* Actividades */}
-            <div className="px-5 py-4">
+            <div className="px-5 py-4 border-b border-white/10">
               <h3 className="text-xs font-medium text-white/40 uppercase tracking-wider mb-3">Actividades extra</h3>
               {actividades.length === 0 ? (
                 <p className="text-white/30 text-xs">No hay actividades activas</p>
@@ -239,6 +275,66 @@ export default function ProfesoresClient({ profesores: inicial, grupos, activida
                 </div>
               )}
             </div>
+
+            {/* Usuario */}
+            <div className="px-5 py-4">
+              <h3 className="text-xs font-medium text-white/40 uppercase tracking-wider mb-3">Acceso al portal</h3>
+              {seleccionado.user_id ? (
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-green-400">✓ Usuario activo</p>
+                    <p className="text-xs text-white/40">{seleccionado.email}</p>
+                  </div>
+                  <button onClick={eliminarUsuario} disabled={loadingUsuario}
+                    className="text-xs text-red-400/70 hover:text-red-400 transition-colors disabled:opacity-50">
+                    Eliminar acceso
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  <p className="text-xs text-white/30 mb-3">Este profesor no tiene acceso al portal todavía.</p>
+                  <button onClick={() => { setFormUsuario({ email: seleccionado.email ?? '', password: '' }); setModalUsuario(true) }}
+                    className="text-xs bg-white/5 hover:bg-white/10 text-white/60 hover:text-white px-3 py-1.5 rounded-lg transition-colors">
+                    Crear usuario
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal crear usuario */}
+      {modalUsuario && seleccionado && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+          <div className="bg-[#111] border border-white/10 rounded-2xl p-6 w-full max-w-md">
+            <h2 className="text-lg font-semibold text-white mb-1">Crear acceso para {seleccionado.nombre}</h2>
+            <p className="text-xs text-white/40 mb-4">El profesor podrá iniciar sesión en su portal con estas credenciales.</p>
+            <form onSubmit={crearUsuario} className="space-y-3">
+              <div>
+                <label className="block text-xs text-white/50 mb-1">Email *</label>
+                <input required type="email" value={formUsuario.email} onChange={e => setFormUsuario({ ...formUsuario, email: e.target.value })}
+                  placeholder="correo@ejemplo.com"
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-[#e91e8c]" />
+              </div>
+              <div>
+                <label className="block text-xs text-white/50 mb-1">Contraseña temporal *</label>
+                <input required type="text" value={formUsuario.password} onChange={e => setFormUsuario({ ...formUsuario, password: e.target.value })}
+                  placeholder="Mínimo 6 caracteres"
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-[#e91e8c]" />
+              </div>
+              {errorUsuario && <p className="text-sm text-red-400">{errorUsuario}</p>}
+              <div className="flex gap-2 pt-2">
+                <button type="button" onClick={() => { setModalUsuario(false); setErrorUsuario('') }}
+                  className="flex-1 border border-white/10 text-white/60 text-sm py-2 rounded-lg hover:bg-white/5 transition-colors">
+                  Cancelar
+                </button>
+                <button type="submit" disabled={loadingUsuario}
+                  className="flex-1 bg-[#e91e8c] hover:bg-[#ff3da8] text-white text-sm py-2 rounded-lg disabled:opacity-50 transition-colors">
+                  {loadingUsuario ? 'Creando...' : 'Crear acceso'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

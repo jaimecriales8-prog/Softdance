@@ -15,6 +15,7 @@ export default async function DashboardPage() {
   if (perfil?.rol === 'super_admin') redirect('/super-admin')
   if (perfil?.rol === 'admin_escuela') redirect('/escuela')
   if (perfil?.rol === 'padre') redirect('/familia')
+  if (perfil?.rol === 'profesor') redirect('/profesor')
 
   redirect('/login')
 }
