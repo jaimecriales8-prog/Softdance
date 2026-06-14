@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
+import { enviarBienvenida } from '@/lib/email'
 import { NextRequest, NextResponse } from 'next/server'
 
 async function getEscuelaId(supabase: any, userId: string) {
@@ -41,6 +42,8 @@ export async function POST(request: NextRequest) {
     .eq('id', profesor_id)
 
   if (updateError) return NextResponse.json({ error: updateError.message }, { status: 400 })
+
+  enviarBienvenida({ email, nombre: profesor.nombre, password, rol: 'profesor' }).catch(() => {})
 
   return NextResponse.json({ ok: true })
 }

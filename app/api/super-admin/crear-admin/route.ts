@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
+import { enviarBienvenida } from '@/lib/email'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(request: NextRequest) {
@@ -42,6 +43,8 @@ export async function POST(request: NextRequest) {
     await service.auth.admin.deleteUser(authData.user.id)
     return NextResponse.json({ error: perfilError.message }, { status: 400 })
   }
+
+  enviarBienvenida({ email, nombre, password, rol: 'admin_escuela' }).catch(() => {})
 
   return NextResponse.json({ perfil: perfilData })
 }

@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
+import { enviarBienvenida } from '@/lib/email'
 import { NextRequest, NextResponse } from 'next/server'
 
 async function getEscuelaId(supabase: any, userId: string) {
@@ -54,6 +55,9 @@ export async function POST(request: NextRequest) {
     nombre,
     email,
   })
+
+  // Fire-and-forget welcome email
+  enviarBienvenida({ email, nombre, password, rol: 'padre' }).catch(() => {})
 
   return NextResponse.json({ familia })
 }
