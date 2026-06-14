@@ -50,6 +50,74 @@ export async function enviarBienvenida({
   })
 }
 
+export async function enviarNuevaMensualidad({
+  email, nombreFamilia, periodo, total, fechaLimite, detalle,
+}: {
+  email: string; nombreFamilia: string; periodo: string; total: number
+  fechaLimite: string | null; detalle: { alumna: string; lineas: { concepto: string; valor: number }[] }[]
+}) {
+  const MESES = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
+  const [a, m] = periodo.split('-').map(Number)
+  const mesLabel = `${MESES[m]} ${a}`
+  const vence = fechaLimite
+    ? new Date(fechaLimite + 'T12:00:00').toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' })
+    : null
+
+  const detalleHtml = detalle.map(d => `
+    <p style="margin:12px 0 4px;font-size:13px;font-weight:600;color:#fff">${d.alumna}</p>
+    ${d.lineas.map(l => `
+      <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.05);font-size:13px;color:#999">
+        <span>${l.concepto}</span><span style="color:#ccc">$${l.valor.toLocaleString('es-CO')}</span>
+      </div>`).join('')}`).join('')
+
+  await sendEmail({
+    to: email,
+    subject: `Mensualidad ${mesLabel} — $${total.toLocaleString('es-CO')}`,
+    html: emailHtml(`Mensualidad ${mesLabel}`, `
+      <p>Hola, <strong>${nombreFamilia}</strong>. Tu mensualidad de <strong>${mesLabel}</strong> ya está disponible.</p>
+      <div style="background:#1a1a1a;border-radius:12px;padding:20px;margin:20px 0">
+        ${detalleHtml}
+        <div style="display:flex;justify-content:space-between;padding:12px 0 0;margin-top:8px;border-top:1px solid rgba(255,255,255,0.1);font-size:15px;font-weight:700">
+          <span style="color:#fff">Total</span>
+          <span style="color:#e91e8c">$${total.toLocaleString('es-CO')}</span>
+        </div>
+      </div>
+      ${vence ? `<p style="color:#999;font-size:13px">Fecha límite de pago: <strong style="color:#fff">${vence}</strong></p>` : ''}
+      <a href="${APP_URL}/familia/mensualidades" style="display:inline-block;margin-top:8px;background:#e91e8c;color:#fff;text-decoration:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:600">
+        Ver mi cuenta
+      </a>
+    `),
+  })
+}
+
+export async function enviarRecordatorioPago({
+  email, nombreFamilia, periodo, total, fechaLimite,
+}: {
+  email: string; nombreFamilia: string; periodo: string; total: number; fechaLimite: string
+}) {
+  const MESES = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
+  const [a, m] = periodo.split('-').map(Number)
+  const mesLabel = `${MESES[m]} ${a}`
+  const vence = new Date(fechaLimite + 'T12:00:00').toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' })
+
+  await sendEmail({
+    to: email,
+    subject: `Recordatorio: mensualidad ${mesLabel} vence el ${vence}`,
+    html: emailHtml('Recordatorio de pago', `
+      <p>Hola, <strong>${nombreFamilia}</strong>. Te recordamos que tu mensualidad de <strong>${mesLabel}</strong> vence en 3 días.</p>
+      <div style="background:#1a1a1a;border-radius:12px;padding:20px;margin:20px 0;text-align:center">
+        <p style="margin:0 0 4px;color:#999;font-size:13px">Total pendiente</p>
+        <p style="margin:0;font-size:32px;font-weight:700;color:#e91e8c">$${total.toLocaleString('es-CO')}</p>
+        <p style="margin:8px 0 0;color:#666;font-size:13px">Vence el ${vence}</p>
+      </div>
+      <a href="${APP_URL}/familia/mensualidades" style="display:inline-block;margin-top:8px;background:#e91e8c;color:#fff;text-decoration:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:600">
+        Ver mi cuenta
+      </a>
+      <p style="margin-top:24px;color:#666;font-size:12px">Si ya realizaste el pago, ignora este mensaje.</p>
+    `),
+  })
+}
+
 export async function enviarResetPassword({
   email, nombre, resetUrl,
 }: {

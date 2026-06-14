@@ -1,8 +1,8 @@
 import { createServiceClient } from '@/lib/supabase/service'
+import { enviarNuevaMensualidad } from '@/lib/email'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(request: NextRequest) {
-  // Verificar que viene de Vercel Cron
   const auth = request.headers.get('authorization')
   if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
@@ -15,7 +15,6 @@ export async function GET(request: NextRequest) {
   const periodo = `${anio}-${String(mes).padStart(2, '0')}`
   const fechaLimite = new Date(anio, mes, 5).toISOString().split('T')[0] // día 5 del mes siguiente
 
-  // Obtener escuelas activas donde este mes está habilitado
   const { data: escuelas } = await supabase
     .from('escuelas')
     .select('id, meses_activos')
@@ -27,7 +26,6 @@ export async function GET(request: NextRequest) {
   let totalGeneradas = 0
 
   for (const escuela of escuelas) {
-    // Obtener familias con alumnas activas y no congeladas
     const { data: alumnas } = await supabase
       .from('alumnas')
       .select(`
@@ -48,8 +46,17 @@ export async function GET(request: NextRequest) {
       porFamilia[a.familia_id].push(a)
     }
 
+    // Obtener emails de todas las familias de esta escuela
+    const familiaIds = Object.keys(porFamilia)
+    const { data: familias } = await supabase
+      .from('familias')
+      .select('id, nombre, email')
+      .in('id', familiaIds)
+
+    const familiaMap: Record<string, { nombre: string; email: string }> = {}
+    for (const f of familias ?? []) familiaMap[f.id] = { nombre: f.nombre, email: f.email }
+
     for (const [familia_id, alumnasFamilia] of Object.entries(porFamilia)) {
-      // Verificar que no existe ya la mensualidad de este período
       const { data: existe } = await supabase
         .from('mensualidades')
         .select('id')
@@ -59,14 +66,12 @@ export async function GET(request: NextRequest) {
 
       if (existe) continue
 
-      // Calcular detalle y total
       const detalle: any[] = []
       let subtotal = 0
 
       for (const alumna of alumnasFamilia) {
         const lineas: any[] = []
 
-        // Grupos activos
         const grupos = (alumna.alumna_grupo ?? [])
           .filter((ag: any) => ag.activo)
           .map((ag: any) => Array.isArray(ag.grupos) ? ag.grupos[0] : ag.grupos)
@@ -77,7 +82,6 @@ export async function GET(request: NextRequest) {
           subtotal += g.precio_mensual
         }
 
-        // Actividades recurrentes activas
         const actividades = (alumna.alumna_actividad ?? [])
           .filter((aa: any) => aa.activo !== false)
           .map((aa: any) => Array.isArray(aa.actividades_extra) ? aa.actividades_extra[0] : aa.actividades_extra)
@@ -108,6 +112,19 @@ export async function GET(request: NextRequest) {
       })
 
       totalGeneradas++
+
+      // Notificar a la familia por email (fire-and-forget)
+      const familia = familiaMap[familia_id]
+      if (familia?.email) {
+        enviarNuevaMensualidad({
+          email: familia.email,
+          nombreFamilia: familia.nombre,
+          periodo,
+          total: subtotal,
+          fechaLimite,
+          detalle,
+        }).catch(() => {})
+      }
     }
   }
 
