@@ -195,12 +195,18 @@ export default function FamiliaDetalleClient({
 
   return (
     <div>
-      <div className="flex items-center gap-2 mb-6">
-        <Link href="/escuela/familias" className="text-white/40 hover:text-white text-sm transition-colors">
-          ← Familias
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-2">
+          <Link href="/escuela/familias" className="text-white/40 hover:text-white text-sm transition-colors">
+            ← Familias
+          </Link>
+          <span className="text-white/20">/</span>
+          <span className="text-white text-sm">{familia.nombre}</span>
+        </div>
+        <Link href={`/escuela/familias/${familia.id}/recibo`}
+          className="text-xs border border-white/10 text-white/50 hover:text-white hover:border-white/20 px-3 py-1.5 rounded-lg transition-colors">
+          Ver recibo
         </Link>
-        <span className="text-white/20">/</span>
-        <span className="text-white text-sm">{familia.nombre}</span>
       </div>
 
       {/* Info familia */}
