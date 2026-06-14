@@ -26,8 +26,8 @@ export default async function CobrosPage() {
   return (
     <CobrosClient
       escuela={escuela ?? { id: escuelaId, meses_activos: [] }}
-      mensualidades={mensualidades ?? []}
-      eventos={eventos ?? []}
+      mensualidades={(mensualidades ?? []) as any[]}
+      eventos={(eventos ?? []) as any[]}
       periodoActual={periodoActual}
     />
   )
