@@ -6,8 +6,8 @@
 - Next.js 16.2.9 (App Router, Turbopack) + React 19 + TypeScript 5
 - Supabase (PostgreSQL + Auth + RLS + Storage)
 - Tailwind CSS v4
-- Wompi (pagos Colombia) — pendiente integración
-- Resend (emails) — pendiente integración
+- Wompi (pagos Colombia) — integrado: checkout + webhook
+- Resend (emails) — integrado: bienvenida + reset de contraseña
 
 ## Ubicación
 `/Users/jaimecriales/Sites/softdance`
@@ -25,6 +25,7 @@ Cada escuela es un tenant independiente. El `escuela_id` es la barrera de RLS en
 super_admin (Jaime)
   └── Escuela (tenant)
         ├── admin_escuela
+        ├── profesor
         └── padre (familia)
               └── alumnas
 ```
@@ -32,7 +33,8 @@ super_admin (Jaime)
 ## Roles del sistema
 - `super_admin` → gestiona todas las escuelas, sin `escuela_id`
 - `admin_escuela` → dueña/coordinadora de una escuela
-- `padre` → ve solo sus hijas, horarios y pagos
+- `profesor` → ve su horario en `/profesor`
+- `padre` → ve solo sus hijas, horarios, pagos y comunicados
 
 ## Modelo de datos principal
 
@@ -40,7 +42,8 @@ super_admin (Jaime)
 escuelas
   ├── activa, cobro_activo, plan
   ├── valor_matricula
-  └── meses_activos (integer[]) — meses habilitados para cobro
+  ├── info_pago (texto libre para instrucciones de pago manual)
+  └── meses_activos (integer[]) — meses habilitados para cobro mensual
 
 familias → alumnas
   ├── activa, congelada (alumnas congeladas se excluyen del cobro)
@@ -66,86 +69,134 @@ mensualidades → por familia, por período "YYYY-MM"
   ├── fecha_limite
   └── detalle (jsonb) → [{ alumna, lineas: [{ concepto, valor }] }]
 
-pagos → transacciones Wompi (pendiente)
-comunicados → (pendiente)
-config_pagos → wompi_pub_key, wompi_priv_key por escuela
+eventos → competencias o eventos especiales
+  ├── conceptos (jsonb) → [{ nombre, valor }] — ítems de cobro con valor por defecto
+  └── num_cuotas — cuántas cuotas para pagar el evento
+
+evento_alumna → participación de alumna en evento
+  ├── total — suma de sus lineas
+  ├── lineas (jsonb) → [{ concepto, valor }] — valores individuales por alumna
+  ├── cuotas (jsonb) → [{ numero, estado }]
+  └── estado: 'pendiente' | 'pagado'
+
+matriculas → por familia, por año
+  ├── valor, estado: 'pendiente' | 'pagado'
+  └── unique(escuela_id, familia_id, anio)
+
+comunicados → avisos por escuela
+  ├── titulo, cuerpo
+  └── grupo_id (null = todas las familias)
+
+profesores → datos del profesor
+  └── user_id → vincula con auth user (rol='profesor')
+
+config_pagos → wompi_pub_key, wompi_priv_key, wompi_integrity_secret por escuela
+pagos → transacciones Wompi completadas
 ```
 
 ## Tablas en BD (todas con RLS)
 `escuelas`, `perfiles`, `familias`, `alumnas`, `grupos`, `alumna_grupo`,
 `actividades_extra`, `alumna_actividad`, `horarios`, `mensualidades`, `pagos`,
-`comunicados`, `config_pagos`
+`eventos`, `evento_alumna`, `matriculas`, `comunicados`, `profesores`,
+`grupo_profesor`, `actividad_profesor`, `config_pagos`
 
 ## Helpers RLS
 ```sql
-mi_escuela_id()  -- escuela_id del usuario actual
-mi_rol()         -- rol del usuario actual
-mi_familia_id()  -- familia_id del padre actual
+mi_escuela_id()   -- escuela_id del usuario actual
+mi_rol()          -- rol del usuario actual
+mi_familia_id()   -- familia_id del padre actual
+mi_profesor_id()  -- profesor_id del usuario actual (desde profesores.user_id)
 ```
 
 ## Clientes Supabase
 - `lib/supabase/client.ts` → browser (componentes cliente)
 - `lib/supabase/server.ts` → server components y route handlers
-- `lib/supabase/service.ts` → service role (bypasa RLS para cron y operaciones admin)
+- `lib/supabase/service.ts` → service role (bypasa RLS para admin y cron)
+
+## Email — `lib/email.ts`
+- `enviarBienvenida({ email, nombre, password, rol })` — al crear familia, profesor o admin_escuela
+- `enviarResetPassword({ email, nombre, resetUrl })` — desde `/api/auth/forgot-password`
+- Remitente configurable con `EMAIL_FROM` (por defecto `onboarding@resend.dev`)
 
 ## Auth routing
 `app/dashboard/page.tsx` redirige según rol:
 - `super_admin` → `/super-admin`
 - `admin_escuela` → `/escuela`
+- `profesor` → `/profesor`
 - `padre` → `/familia`
 
-No hay `proxy.ts` ni `middleware.ts` activos.
+Flujo recuperación de contraseña: `/forgot-password` → email con enlace → `/reset-password` (PKCE de Supabase)
 
 ## Rutas implementadas
 
 ### `/super-admin`
-- Lista y gestión de escuelas (crear, editar, activar/desactivar, toggle cobro)
-- Configurar Wompi por escuela (pub_key + priv_key en config_pagos)
-- Crear admin_escuela desde el panel de detalle de escuela
+- Lista y gestión de escuelas (crear, editar, activar/desactivar)
+- Toggle `cobro_activo` por escuela (habilita botón Wompi en portal padres)
+- Configurar Wompi por escuela (pub_key, priv_key, integrity_secret en `config_pagos`)
+- Crear `admin_escuela` → recibe email de bienvenida
 
 ### `/escuela` (admin_escuela)
-- **Dashboard** — stats: grupos, familias, alumnas
-- **Grupos** — CRUD grupos normales y élite, panel lateral con alumnas del grupo (agregar/quitar)
-- **Familias** — CRUD familias, detalle con alumnas por familia
-  - Alumna: nombre, documento, fecha_nacimiento, notas, grupo inicial
-  - Cambiar grupo normal o élite (independientes, no excluyentes)
-  - Actividades extra por alumna (chips toggle)
-  - Congelar/descongelar alumna (excluye del cobro mensual)
-  - Valor mensual calculado en tiempo real (grupos + actividades recurrentes)
+- **Dashboard** — stats: grupos, familias, alumnas; campo `info_pago` para instrucciones manuales
+- **Grupos** — CRUD grupos normales y élite; panel lateral con alumnas (agregar/quitar)
+- **Familias** — CRUD familias; detalle con alumnas
+  - Alumna: nombre, documento, fecha_nacimiento, notas
+  - Asignar grupo normal o élite (independientes, no excluyentes)
+  - Actividades extra (chips toggle)
+  - Congelar/descongelar alumna
+  - Valor mensual calculado en tiempo real
+  - Recibo de pago imprimible (`/escuela/familias/[id]/recibo`)
 - **Horarios** — por grupo o actividad extra, agrupados por día
 - **Actividades extra** — CRUD, precio, tipo (mensual/único), toggle activa
+- **Profesores** — CRUD; asignar a grupos y actividades; crear usuario portal (rol='profesor') → email bienvenida
 - **Tarifas** — edición inline: matrícula anual, precio por grupo, precio por actividad
-- **Mensualidades** — configurar meses activos, generar por período, marcar pagada, ver detalle
+- **Eventos** — CRUD con conceptos (ítems de cobro); agregar alumnas con valores individuales por concepto; cuotas
+- **Cobros** — tabs Mensualidades / Eventos
+  - Mensualidades: configurar meses activos, generar por período, marcar pagada, aplicar descuento, ver detalle
+  - Eventos: estado de cuotas por alumna, marcar cuotas pagadas
+- **Matrículas** — generar para todas las familias o individual; marcar pagada/pendiente
+- **Comunicados** — crear/eliminar avisos; dirigir a grupo específico o todas las familias
 
 ### `/familia` (padre)
-- **Inicio** — alumnas activas con grupos/actividades, mensualidad del mes actual
-- **Horarios** — clases de los grupos de sus hijas
-- **Mensualidades** — historial con desglose por alumna
+- **Inicio** — alumnas activas, mensualidad del mes con botón Wompi o info de pago manual
+- **Horarios** — clases de los grupos de sus hijas + export ICS (webcal + descarga)
+- **Mensualidades** — historial con desglose; matrículas del año
+- **Eventos** — participación de sus alumnas, lineas de costo y estado de cuotas
+- **Comunicados** — avisos globales + los del grupo de sus hijas
+
+### `/profesor` (profesor)
+- Horario semanal de sus grupos y actividades asignadas
+- Export ICS (webcal + descarga)
+
+### `/forgot-password` y `/reset-password`
+- Flujo completo de recuperación de contraseña vía Resend + Supabase recovery link
+
+## Pagos Wompi
+- Checkout URL: `https://checkout.wompi.co/p/?...` con hash SHA256 de integridad
+- Reference format: `MENS-{mensualidad_id}`
+- Webhook en `/api/webhooks/wompi` verifica firma y marca mensualidad como 'pagado'
+- `cobro_activo=true` en escuela + `wompi_pub_key` configurada → botón Pagar visible en portal padres
 
 ## Cron jobs
 - `vercel.json` → `/api/cron/generar-mensualidades` corre el 1 de cada mes a las 6am
 - Genera mensualidades solo para escuelas activas con el mes habilitado en `meses_activos`
-- No duplica si ya existe el período
-- Excluye alumnas congeladas
+- No duplica si ya existe el período; excluye alumnas congeladas
 
 ## Variables de entorno
 ```
 NEXT_PUBLIC_SUPABASE_URL
 NEXT_PUBLIC_SUPABASE_ANON_KEY
 SUPABASE_SERVICE_ROLE_KEY
-CRON_SECRET              ← para autenticar el cron de Vercel
+NEXT_PUBLIC_APP_URL          ← https://softdance.vercel.app
+CRON_SECRET                  ← autenticar cron de Vercel
+RESEND_API_KEY               ← API key de Resend
+EMAIL_FROM                   ← opcional, ej: Softdance <noreply@tudominio.com>
 ```
-
-## Pendiente
-- **Wompi** — integración de pagos, link de pago en portal padres, webhook
-- **Comunicados** — avisos por grupo o globales
-- **Matrícula** — cobro de matrícula anual (campo valor_matricula ya existe en escuelas)
-- **Descuentos** — campo descuento ya existe en mensualidades, falta UI
-- **Portal padres** — botón pagar (requiere Wompi)
 
 ## Notas importantes
 - Grupos élite NO son excluyentes: alumna puede tener grupo normal + élite simultáneamente
-- `alumna_grupo` tiene unique constraint `(alumna_id, grupo_id, fecha_inicio)` — usar check-then-insert
-- `alumna_actividad` tiene unique constraint `(alumna_id, actividad_id, fecha_inicio)` — usar upsert
+- `alumna_grupo` tiene unique constraint `(alumna_id, grupo_id, fecha_inicio)` — check-then-insert
+- `alumna_actividad` tiene unique constraint `(alumna_id, actividad_id, fecha_inicio)` — upsert
 - `alumnas.congelada = true` → excluida de mensualidades pero sigue en el sistema
-- El token de Supabase Management API está disponible para queries directas desde scripts Node
+- `evento_alumna.lineas` por alumna sobreescribe los `conceptos` del evento (valores individuales)
+- Resend plan free solo envía a emails verificados; verificar dominio para producción real
+- Local `next build` puede fallar con Turbopack en CSS — usar `tsc --noEmit` para verificar tipos; Vercel usa webpack y compila bien
