@@ -89,9 +89,13 @@ export async function POST(request: NextRequest) {
       .in('id', mismoTipo.map((ag: any) => ag.id))
   }
 
+  const fecha_inicio = new Date().toISOString().split('T')[0]
   const { data, error } = await supabase
     .from('alumna_grupo')
-    .insert({ escuela_id: escuelaId, alumna_id, grupo_id, fecha_inicio: new Date().toISOString().split('T')[0], activo: true })
+    .upsert(
+      { escuela_id: escuelaId, alumna_id, grupo_id, fecha_inicio, activo: true, fecha_fin: null },
+      { onConflict: 'alumna_id,grupo_id,fecha_inicio' }
+    )
     .select('id, fecha_inicio, alumnas(id, nombre, fecha_nacimiento, familias(nombre))')
     .single()
 
