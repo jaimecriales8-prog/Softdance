@@ -9,6 +9,9 @@ type GrupoBase = { id: string; nombre: string; es_elite: boolean }
 type AlumnaGrupo = { id: string; fecha_inicio: string; fecha_fin: string | null; activo: boolean; grupos: GrupoBase | GrupoBase[] }
 type ActividadExtra = { id: string; nombre: string; precio: number; es_recurrente: boolean }
 type AlumnaActividad = { id: string; actividades_extra: ActividadExtra | ActividadExtra[] }
+type Concepto = { nombre: string; valor: number }
+type Evento = { id: string; nombre: string; fecha: string | null; num_cuotas: number; conceptos: Concepto[] }
+type EventoAlumnaRef = { evento_id: string; alumna_id: string; id: string }
 type Alumna = {
   id: string; nombre: string; documento: string | null; fecha_nacimiento: string | null
   foto_url: string | null; activa: boolean; congelada: boolean; notas: string | null
@@ -49,9 +52,10 @@ function actividadesAlumna(alumna: Alumna): ActividadExtra[] {
 }
 
 export default function FamiliaDetalleClient({
-  familia, alumnas: inicialesAlumnas, grupos, actividades, escuelaId
+  familia, alumnas: inicialesAlumnas, grupos, actividades, eventos, eventoAlumnasIniciales, escuelaId
 }: {
-  familia: Familia; alumnas: Alumna[]; grupos: Grupo[]; actividades: ActividadExtra[]; escuelaId: string
+  familia: Familia; alumnas: Alumna[]; grupos: Grupo[]; actividades: ActividadExtra[]
+  eventos: Evento[]; eventoAlumnasIniciales: EventoAlumnaRef[]; escuelaId: string
 }) {
   const [alumnas, setAlumnas] = useState(inicialesAlumnas)
   const [modal, setModal] = useState<'crear' | 'editar' | 'cambiar_grupo' | null>(null)
@@ -64,6 +68,13 @@ export default function FamiliaDetalleClient({
   // Panel actividades
   const [alumnaActividadId, setAlumnaActividadId] = useState<string | null>(null)
   const [actividadLoading, setActividadLoading] = useState<string | null>(null)
+
+  // Panel eventos
+  const [alumnaEventoId, setAlumnaEventoId] = useState<string | null>(null)
+  const [eventoAlumnas, setEventoAlumnas] = useState<EventoAlumnaRef[]>(eventoAlumnasIniciales)
+  const [eventoModal, setEventoModal] = useState<{ alumna: Alumna; evento: Evento } | null>(null)
+  const [conceptosForm, setConceptosForm] = useState<{ nombre: string; valor: string; activo: boolean }[]>([])
+  const [savingEvento, setSavingEvento] = useState(false)
 
   const supabase = createClient()
 
@@ -188,6 +199,36 @@ export default function FamiliaDetalleClient({
       }
     }
     setActividadLoading(null)
+  }
+
+  function abrirEventoModal(alumna: Alumna, evento: Evento) {
+    setConceptosForm(evento.conceptos.map(c => ({ nombre: c.nombre, valor: String(c.valor), activo: true })))
+    setEventoModal({ alumna, evento })
+  }
+
+  async function guardarEvento(e: React.FormEvent) {
+    e.preventDefault()
+    if (!eventoModal) return
+    setSavingEvento(true)
+    const lineas = conceptosForm
+      .filter(c => c.activo)
+      .map(c => ({ concepto: c.nombre, valor: parseInt(c.valor) || 0 }))
+    const res = await fetch('/api/escuela/eventos/participantes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        evento_id: eventoModal.evento.id,
+        alumna_id: eventoModal.alumna.id,
+        lineas,
+        num_cuotas: eventoModal.evento.num_cuotas,
+      }),
+    })
+    const data = await res.json()
+    if (res.ok) {
+      setEventoAlumnas(prev => [...prev, { evento_id: eventoModal.evento.id, alumna_id: eventoModal.alumna.id, id: data.participante?.id ?? Math.random().toString() }])
+      setEventoModal(null)
+    }
+    setSavingEvento(false)
   }
 
   const normales = grupos.filter(g => !g.es_elite)
@@ -330,6 +371,62 @@ export default function FamiliaDetalleClient({
         </div>
       )}
 
+      {/* Modal conceptos evento */}
+      {eventoModal && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+          <div className="bg-[#111] border border-white/10 rounded-2xl p-6 w-full max-w-md max-h-[85vh] overflow-y-auto">
+            <h2 className="text-lg font-semibold text-white mb-1">{eventoModal.evento.nombre}</h2>
+            <p className="text-white/40 text-xs mb-4">
+              Marca los conceptos que aplican a <strong className="text-white">{eventoModal.alumna.nombre}</strong> y ajusta los valores.
+            </p>
+            <form onSubmit={guardarEvento} className="space-y-3">
+              {conceptosForm.map((c, i) => (
+                <div key={i} className={`border rounded-xl p-3 transition-colors ${c.activo ? 'border-[#e91e8c]/30 bg-[#e91e8c]/5' : 'border-white/10 bg-white/5'}`}>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      checked={c.activo}
+                      onChange={e => setConceptosForm(f => f.map((x, j) => j === i ? { ...x, activo: e.target.checked } : x))}
+                      className="w-4 h-4 accent-[#e91e8c]"
+                    />
+                    <span className={`text-sm flex-1 ${c.activo ? 'text-white' : 'text-white/40'}`}>{c.nombre}</span>
+                    <input
+                      type="number"
+                      disabled={!c.activo}
+                      value={c.valor}
+                      onChange={e => setConceptosForm(f => f.map((x, j) => j === i ? { ...x, valor: e.target.value } : x))}
+                      className="w-28 bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-sm text-white text-right focus:outline-none focus:border-[#e91e8c] disabled:opacity-30"
+                    />
+                  </div>
+                </div>
+              ))}
+              <div className="border-t border-white/10 pt-3">
+                <p className="text-xs text-white/40 text-right mb-3">
+                  Total: <span className="text-white font-bold">
+                    ${conceptosForm.filter(c => c.activo).reduce((s, c) => s + (parseInt(c.valor) || 0), 0).toLocaleString('es-CO')}
+                  </span>
+                  {eventoModal.evento.num_cuotas > 1 && (
+                    <span className="ml-1 text-white/30">
+                      ({eventoModal.evento.num_cuotas} cuotas de ${Math.round(conceptosForm.filter(c => c.activo).reduce((s, c) => s + (parseInt(c.valor) || 0), 0) / eventoModal.evento.num_cuotas).toLocaleString('es-CO')})
+                    </span>
+                  )}
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => setEventoModal(null)}
+                  className="flex-1 border border-white/10 text-white/60 text-sm py-2 rounded-lg hover:bg-white/5 transition-colors">
+                  Cancelar
+                </button>
+                <button type="submit" disabled={savingEvento || conceptosForm.filter(c => c.activo).length === 0}
+                  className="flex-1 bg-[#e91e8c] hover:bg-[#ff3da8] text-white text-sm py-2 rounded-lg disabled:opacity-50 transition-colors">
+                  {savingEvento ? 'Guardando...' : 'Inscribir'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Lista alumnas */}
       {alumnas.length === 0 ? (
         <div className="bg-white/5 border border-white/10 rounded-xl px-4 py-12 text-center text-white/30 text-sm">
@@ -403,6 +500,16 @@ export default function FamiliaDetalleClient({
                         Actividades {actsAlumna.length > 0 ? `(${actsAlumna.length})` : ''}
                       </button>
                     )}
+                    {eventos.length > 0 && (() => {
+                      const mostrandoEventos = alumnaEventoId === a.id
+                      const inscrita = eventoAlumnas.filter(ea => ea.alumna_id === a.id).length
+                      return (
+                        <button onClick={() => setAlumnaEventoId(mostrandoEventos ? null : a.id)}
+                          className={`text-xs transition-colors px-2 py-1 rounded ${mostrandoEventos ? 'text-white bg-white/10' : 'text-white/40 hover:text-white hover:bg-white/5'}`}>
+                          Eventos {inscrita > 0 ? `(${inscrita})` : ''}
+                        </button>
+                      )
+                    })()}
                     <button onClick={() => toggleCongelar(a)}
                       className={`text-xs transition-colors px-2 py-1 rounded ${a.congelada ? 'text-blue-400 hover:text-white hover:bg-white/5' : 'text-white/40 hover:text-blue-400 hover:bg-blue-500/10'}`}>
                       {a.congelada ? '❄ Descongelar' : 'Congelar'}
@@ -416,6 +523,39 @@ export default function FamiliaDetalleClient({
 
                 {/* Notas */}
                 {a.notas && <p className="text-white/30 text-xs px-5 pb-3 ml-12">{a.notas}</p>}
+
+                {/* Panel eventos */}
+                {alumnaEventoId === a.id && (
+                  <div className="border-t border-white/10 px-5 py-3">
+                    <p className="text-xs text-white/40 uppercase tracking-wider mb-2">Eventos</p>
+                    <div className="space-y-2">
+                      {eventos.map(ev => {
+                        const inscrita = eventoAlumnas.some(ea => ea.alumna_id === a.id && ea.evento_id === ev.id)
+                        return (
+                          <div key={ev.id} className="flex items-center justify-between">
+                            <div>
+                              <p className="text-sm text-white">{ev.nombre}</p>
+                              {ev.fecha && (
+                                <p className="text-xs text-white/30">
+                                  {new Date(ev.fecha + 'T12:00:00').toLocaleDateString('es-CO', { day: 'numeric', month: 'long' })}
+                                </p>
+                              )}
+                            </div>
+                            {inscrita ? (
+                              <span className="text-xs text-green-400">✓ Inscrita</span>
+                            ) : (
+                              <button
+                                onClick={() => abrirEventoModal(a, ev)}
+                                className="text-xs bg-[#e91e8c]/10 text-[#e91e8c] hover:bg-[#e91e8c]/20 px-3 py-1 rounded-lg transition-colors">
+                                + Agregar
+                              </button>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
 
                 {/* Panel actividades */}
                 {mostrandoActividades && (
