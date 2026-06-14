@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
       .order('nombre')
 
     if (idsEnGrupo.length > 0) {
-      query = query.not('id', 'in', `(${idsEnGrupo.join(',')})`)
+      query = query.not('id', 'in', `(${idsEnGrupo.map((id: string) => `"${id}"`).join(',')})`)
     }
 
     const { data } = await query
