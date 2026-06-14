@@ -69,6 +69,9 @@ export default function FamiliaDetalleClient({
   const [alumnaActividadId, setAlumnaActividadId] = useState<string | null>(null)
   const [actividadLoading, setActividadLoading] = useState<string | null>(null)
 
+  // Panel historial grupos
+  const [alumnaHistorialId, setAlumnaHistorialId] = useState<string | null>(null)
+
   // Panel eventos
   const [alumnaEventoId, setAlumnaEventoId] = useState<string | null>(null)
   const [eventoAlumnas, setEventoAlumnas] = useState<EventoAlumnaRef[]>(eventoAlumnasIniciales)
@@ -438,6 +441,8 @@ export default function FamiliaDetalleClient({
             const gasActivos = gruposActivos(a)
             const actsAlumna = actividadesAlumna(a)
             const mostrandoActividades = alumnaActividadId === a.id
+            const mostrandoHistorial = alumnaHistorialId === a.id
+            const historialGrupos = [...(a.alumna_grupo ?? [])].sort((x, y) => new Date(y.fecha_inicio).getTime() - new Date(x.fecha_inicio).getTime())
 
             const valorMensual = (() => {
                 const porGrupos = gasActivos.reduce((sum, ag) => {
@@ -510,6 +515,12 @@ export default function FamiliaDetalleClient({
                         </button>
                       )
                     })()}
+                    {historialGrupos.length > 0 && (
+                      <button onClick={() => setAlumnaHistorialId(mostrandoHistorial ? null : a.id)}
+                        className={`text-xs transition-colors px-2 py-1 rounded ${mostrandoHistorial ? 'text-white bg-white/10' : 'text-white/40 hover:text-white hover:bg-white/5'}`}>
+                        Historial
+                      </button>
+                    )}
                     <button onClick={() => toggleCongelar(a)}
                       className={`text-xs transition-colors px-2 py-1 rounded ${a.congelada ? 'text-blue-400 hover:text-white hover:bg-white/5' : 'text-white/40 hover:text-blue-400 hover:bg-blue-500/10'}`}>
                       {a.congelada ? '❄ Descongelar' : 'Congelar'}
@@ -550,6 +561,35 @@ export default function FamiliaDetalleClient({
                                 + Agregar
                               </button>
                             )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Panel historial grupos */}
+                {mostrandoHistorial && (
+                  <div className="border-t border-white/10 px-5 py-3">
+                    <p className="text-xs text-white/40 uppercase tracking-wider mb-2">Historial de grupos</p>
+                    <div className="space-y-2">
+                      {historialGrupos.map((ag, i) => {
+                        const g = Array.isArray(ag.grupos) ? ag.grupos[0] : ag.grupos
+                        const desde = new Date(ag.fecha_inicio + 'T12:00:00').toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' })
+                        const hasta = ag.fecha_fin
+                          ? new Date(ag.fecha_fin + 'T12:00:00').toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' })
+                          : null
+                        return (
+                          <div key={i} className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              {ag.activo && <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block" />}
+                              <p className={`text-sm ${ag.activo ? 'text-white' : 'text-white/50'}`}>
+                                {g?.nombre}{g?.es_elite ? ' ⭐' : ''}
+                              </p>
+                            </div>
+                            <p className="text-xs text-white/30">
+                              {desde}{hasta ? ` → ${hasta}` : ' → hoy'}
+                            </p>
                           </div>
                         )
                       })}
