@@ -4,14 +4,15 @@ import { useState } from 'react'
 
 type Familia = { nombre: string }
 type AlumnaBase = { id: string; nombre: string; familias: Familia | Familia[] | null }
-type Participante = { id: string; estado: string; alumnas: AlumnaBase | AlumnaBase[] }
+type Cuota = { numero: number; estado: 'pendiente' | 'pagado' }
+type Participante = { id: string; estado: string; cuotas: Cuota[] | null; alumnas: AlumnaBase | AlumnaBase[] }
 type Evento = {
   id: string; nombre: string; descripcion: string | null
-  precio: number; fecha: string | null; activo: boolean
+  precio: number; fecha: string | null; activo: boolean; num_cuotas: number
   evento_alumna: Participante[]
 }
 
-const EMPTY = { nombre: '', descripcion: '', precio: '', fecha: '' }
+const EMPTY = { nombre: '', descripcion: '', precio: '', fecha: '', num_cuotas: '1' }
 
 function getFamilia(a: AlumnaBase): string {
   if (!a.familias) return ''
@@ -38,7 +39,7 @@ export default function EventosClient({ eventos: inicial, alumnas, escuelaId }: 
 
   function abrirCrear() { setForm(EMPTY); setEditId(null); setError(''); setModal('crear') }
   function abrirEditar(e: Evento) {
-    setForm({ nombre: e.nombre, descripcion: e.descripcion ?? '', precio: e.precio.toString(), fecha: e.fecha ?? '' })
+    setForm({ nombre: e.nombre, descripcion: e.descripcion ?? '', precio: e.precio.toString(), fecha: e.fecha ?? '', num_cuotas: e.num_cuotas.toString() })
     setEditId(e.id); setError(''); setModal('editar')
   }
   function cerrar() { setModal(null); setEditId(null); setForm(EMPTY); setError('') }
@@ -46,7 +47,7 @@ export default function EventosClient({ eventos: inicial, alumnas, escuelaId }: 
   async function guardar(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true); setError('')
-    const payload = { nombre: form.nombre, descripcion: form.descripcion, precio: parseFloat(form.precio) || 0, fecha: form.fecha || null }
+    const payload = { nombre: form.nombre, descripcion: form.descripcion, precio: parseFloat(form.precio) || 0, fecha: form.fecha || null, num_cuotas: parseInt(form.num_cuotas) || 1 }
     const res = await fetch('/api/escuela/eventos', {
       method: modal === 'crear' ? 'POST' : 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -92,13 +93,15 @@ export default function EventosClient({ eventos: inicial, alumnas, escuelaId }: 
     setEventos(eventos.map(ev => ev.id === eventoActivo.id ? updated : ev))
   }
 
-  async function marcarPagado(p: Participante) {
+  async function marcarCuota(p: Participante, numero: number) {
     if (!eventoActivo) return
-    const nuevoEstado = p.estado === 'pagado' ? 'pendiente' : 'pagado'
+    const cuotas = p.cuotas ?? []
+    const cuota = cuotas.find(c => c.numero === numero)
+    const nuevoEstado = cuota?.estado === 'pagado' ? 'pendiente' : 'pagado'
     const res = await fetch('/api/escuela/eventos/participantes', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ evento_id: eventoActivo.id, alumna_id: getAlumna(p).id, estado: nuevoEstado }),
+      body: JSON.stringify({ evento_id: eventoActivo.id, alumna_id: getAlumna(p).id, cuota_numero: numero, cuota_estado: nuevoEstado }),
     })
     const data = await res.json()
     if (res.ok) {
@@ -151,16 +154,26 @@ export default function EventosClient({ eventos: inicial, alumnas, escuelaId }: 
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs text-white/50 mb-1">Precio (COP) *</label>
+                    <label className="block text-xs text-white/50 mb-1">Precio total (COP) *</label>
                     <input type="number" required value={form.precio} onChange={e => setForm({ ...form, precio: e.target.value })}
                       placeholder="0"
                       className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-[#e91e8c]" />
                   </div>
                   <div>
-                    <label className="block text-xs text-white/50 mb-1">Fecha</label>
-                    <input type="date" value={form.fecha} onChange={e => setForm({ ...form, fecha: e.target.value })}
+                    <label className="block text-xs text-white/50 mb-1">Cuotas</label>
+                    <input type="number" min="1" max="12" value={form.num_cuotas} onChange={e => setForm({ ...form, num_cuotas: e.target.value })}
                       className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#e91e8c]" />
                   </div>
+                </div>
+                {parseInt(form.num_cuotas) > 1 && parseFloat(form.precio) > 0 && (
+                  <p className="text-xs text-white/40">
+                    {parseInt(form.num_cuotas)} cuotas de ${(parseFloat(form.precio) / parseInt(form.num_cuotas)).toLocaleString('es-CO')} c/u
+                  </p>
+                )}
+                <div>
+                  <label className="block text-xs text-white/50 mb-1">Fecha</label>
+                  <input type="date" value={form.fecha} onChange={e => setForm({ ...form, fecha: e.target.value })}
+                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#e91e8c]" />
                 </div>
                 {error && <p className="text-sm text-red-400">{error}</p>}
                 <div className="flex gap-2 pt-2">
@@ -185,7 +198,10 @@ export default function EventosClient({ eventos: inicial, alumnas, escuelaId }: 
         ) : (
           <div className="space-y-3">
             {eventos.map(ev => {
-              const pagados = ev.evento_alumna.filter(p => p.estado === 'pagado').length
+              const pagados = ev.evento_alumna.filter(p => {
+                if (ev.num_cuotas === 1) return (p.cuotas?.[0]?.estado ?? p.estado) === 'pagado'
+                return p.estado === 'pagado'
+              }).length
               const total = ev.evento_alumna.length
               const seleccionado = eventoActivo?.id === ev.id
               return (
@@ -198,6 +214,7 @@ export default function EventosClient({ eventos: inicial, alumnas, escuelaId }: 
                       <p className="text-white/40 text-xs mt-0.5">
                         {ev.fecha ? new Date(ev.fecha + 'T12:00:00').toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' }) : 'Sin fecha'}
                         {' · '}${Number(ev.precio).toLocaleString('es-CO')}
+                        {ev.num_cuotas > 1 && ` (${ev.num_cuotas} cuotas)`}
                       </p>
                     </div>
                     <div className="text-right">
@@ -235,22 +252,41 @@ export default function EventosClient({ eventos: inicial, alumnas, escuelaId }: 
                 <ul className="divide-y divide-white/5 max-h-52 overflow-y-auto">
                   {eventoActivo.evento_alumna.map(p => {
                     const a = getAlumna(p)
+                    const cuotas = p.cuotas ?? []
+                    const pagadas = cuotas.filter(c => c.estado === 'pagado').length
+                    const montoCuota = Number(eventoActivo.precio) / eventoActivo.num_cuotas
                     return (
-                      <li key={p.id} className="flex items-center justify-between px-5 py-2.5 hover:bg-white/5 group transition-colors">
-                        <div>
-                          <p className="text-sm text-white">{a.nombre}</p>
-                          <p className="text-xs text-white/40">{getFamilia(a)}</p>
+                      <li key={p.id} className="px-5 py-2.5 hover:bg-white/5 group transition-colors">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm text-white">{a.nombre}</p>
+                            <p className="text-xs text-white/40">{getFamilia(a)}</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {eventoActivo.num_cuotas === 1 ? (
+                              <button onClick={() => marcarCuota(p, 1)}
+                                className={`text-xs px-2 py-1 rounded-lg transition-colors ${cuotas[0]?.estado === 'pagado' ? 'bg-green-500/15 text-green-400' : 'bg-white/5 text-white/40 hover:bg-white/10'}`}>
+                                {cuotas[0]?.estado === 'pagado' ? '✓ Pagado' : 'Pendiente'}
+                              </button>
+                            ) : (
+                              <span className="text-xs text-white/40">{pagadas}/{eventoActivo.num_cuotas} cuotas</span>
+                            )}
+                            <button onClick={() => quitarParticipante(p)}
+                              className="text-white/20 hover:text-red-400 opacity-0 group-hover:opacity-100 text-xs px-1.5 py-1 rounded transition-all">
+                              ✕
+                            </button>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <button onClick={() => marcarPagado(p)}
-                            className={`text-xs px-2 py-1 rounded-lg transition-colors ${p.estado === 'pagado' ? 'bg-green-500/15 text-green-400' : 'bg-white/5 text-white/40 hover:bg-white/10'}`}>
-                            {p.estado === 'pagado' ? '✓ Pagado' : 'Pendiente'}
-                          </button>
-                          <button onClick={() => quitarParticipante(p)}
-                            className="text-white/20 hover:text-red-400 opacity-0 group-hover:opacity-100 text-xs px-1.5 py-1 rounded transition-all">
-                            ✕
-                          </button>
-                        </div>
+                        {eventoActivo.num_cuotas > 1 && (
+                          <div className="flex gap-1.5 mt-2 flex-wrap">
+                            {cuotas.map(c => (
+                              <button key={c.numero} onClick={() => marcarCuota(p, c.numero)}
+                                className={`text-xs px-2 py-0.5 rounded transition-colors ${c.estado === 'pagado' ? 'bg-green-500/15 text-green-400' : 'bg-white/5 text-white/30 hover:bg-white/10'}`}>
+                                {c.estado === 'pagado' ? '✓' : ''} Cuota {c.numero} · ${montoCuota.toLocaleString('es-CO')}
+                              </button>
+                            ))}
+                          </div>
+                        )}
                       </li>
                     )
                   })}
