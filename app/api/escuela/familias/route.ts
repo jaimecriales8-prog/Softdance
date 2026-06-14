@@ -16,14 +16,14 @@ export async function POST(request: NextRequest) {
   const escuelaId = await getEscuelaId(supabase, user.id)
   if (!escuelaId) return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
 
-  const { nombre, email, telefono } = await request.json()
-  if (!nombre || !email) return NextResponse.json({ error: 'Faltan campos requeridos' }, { status: 400 })
+  const { nombre, email, telefono, password } = await request.json()
+  if (!nombre || !email || !password) return NextResponse.json({ error: 'Faltan campos requeridos' }, { status: 400 })
 
   const service = createServiceClient()
 
-  // Crear usuario en Auth con magic link (el padre crea su contraseña)
   const { data: authData, error: authError } = await service.auth.admin.createUser({
     email,
+    password,
     email_confirm: true,
     user_metadata: { nombre },
   })
