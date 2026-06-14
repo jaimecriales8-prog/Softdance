@@ -209,6 +209,17 @@ export default function FamiliaDetalleClient({
     setEventoModal({ alumna, evento })
   }
 
+  async function quitarEvento(alumna: Alumna, evento: Evento) {
+    const ref = eventoAlumnas.find(ea => ea.alumna_id === alumna.id && ea.evento_id === evento.id)
+    if (!ref) return
+    await fetch('/api/escuela/eventos/participantes', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ evento_id: evento.id, alumna_id: alumna.id }),
+    })
+    setEventoAlumnas(prev => prev.filter(ea => !(ea.alumna_id === alumna.id && ea.evento_id === evento.id)))
+  }
+
   async function guardarEvento(e: React.FormEvent) {
     e.preventDefault()
     if (!eventoModal) return
@@ -553,7 +564,11 @@ export default function FamiliaDetalleClient({
                               )}
                             </div>
                             {inscrita ? (
-                              <span className="text-xs text-green-400">✓ Inscrita</span>
+                              <button
+                                onClick={() => quitarEvento(a, ev)}
+                                className="text-xs text-red-400/70 hover:text-red-400 hover:bg-red-500/10 px-3 py-1 rounded-lg transition-colors">
+                                ✓ Inscrita · Quitar
+                              </button>
                             ) : (
                               <button
                                 onClick={() => abrirEventoModal(a, ev)}
