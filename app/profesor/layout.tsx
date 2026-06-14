@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import { ReactNode } from 'react'
 
 export default async function ProfesorLayout({ children }: { children: ReactNode }) {
@@ -25,7 +26,7 @@ export default async function ProfesorLayout({ children }: { children: ReactNode
     <div className="min-h-screen flex bg-black text-white">
       <aside className="w-56 flex flex-col border-r border-white/10 bg-black fixed top-0 left-0 h-full">
         <div className="px-6 py-5 border-b border-white/10">
-          <span className="text-xl font-bold tracking-tight text-white">Soft<span className="text-[#e91e8c]">dance</span></span>
+          <Link href="/" className="text-xl font-bold tracking-tight text-white hover:opacity-80 transition-opacity">Soft<span className="text-[#e91e8c]">dance</span></Link>
           <p className="text-xs text-white/40 mt-0.5 truncate">{escuela?.nombre ?? ''}</p>
         </div>
         <nav className="flex-1 px-3 py-4 space-y-1">

@@ -40,7 +40,7 @@ export default async function EscuelaLayout({ children }: { children: ReactNode 
     <div className="min-h-screen flex bg-black text-white">
       <aside className="w-60 flex flex-col border-r border-white/10 bg-black fixed top-0 left-0 h-full">
         <div className="px-6 py-5 border-b border-white/10">
-          <span className="text-xl font-bold tracking-tight text-white">Soft<span className="text-[#e91e8c]">dance</span></span>
+          <Link href="/" className="text-xl font-bold tracking-tight text-white hover:opacity-80 transition-opacity">Soft<span className="text-[#e91e8c]">dance</span></Link>
           <p className="text-xs text-white/40 mt-0.5 truncate">{escuela?.nombre ?? 'Mi escuela'}</p>
         </div>
 
