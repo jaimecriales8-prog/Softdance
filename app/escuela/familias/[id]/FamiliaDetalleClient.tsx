@@ -331,6 +331,17 @@ export default function FamiliaDetalleClient({
             const actsAlumna = actividadesAlumna(a)
             const mostrandoActividades = alumnaActividadId === a.id
 
+            const valorMensual = (() => {
+                const porGrupos = gasActivos.reduce((sum, ag) => {
+                  const g = grupos.find(g => g.id === ag.grupos.id)
+                  return sum + (g?.precio_mensual ?? 0)
+                }, 0)
+                const porActividades = actsAlumna
+                  .filter(act => act.es_recurrente)
+                  .reduce((sum, act) => sum + act.precio, 0)
+                return porGrupos + porActividades
+              })()
+
             return (
               <div key={a.id} className="bg-white/5 border border-white/10 rounded-xl overflow-hidden">
                 {/* Header alumna */}
@@ -350,6 +361,11 @@ export default function FamiliaDetalleClient({
                           : gasActivos.map(ag => `${ag.grupos.nombre}${ag.grupos.es_elite ? ' ⭐' : ''}`).join(' + ')
                         }
                       </p>
+                      {valorMensual > 0 && (
+                        <p className="text-[#e91e8c] text-xs font-medium mt-0.5">
+                          ${valorMensual.toLocaleString('es-CO')}/mes
+                        </p>
+                      )}
                     </div>
                   </div>
                   <div className="flex gap-1 flex-wrap justify-end">
