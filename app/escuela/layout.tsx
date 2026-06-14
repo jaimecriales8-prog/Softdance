@@ -9,6 +9,7 @@ const navItems = [
   { href: '/escuela/familias', label: 'Familias', icon: '◉' },
   { href: '/escuela/horarios', label: 'Horarios', icon: '◷' },
   { href: '/escuela/actividades', label: 'Actividades extra', icon: '◆' },
+  { href: '/escuela/tarifas', label: 'Tarifas', icon: '◈' },
   { href: '/escuela/mensualidades', label: 'Mensualidades', icon: '◎' },
   { href: '/escuela/comunicados', label: 'Comunicados', icon: '◈' },
 ]

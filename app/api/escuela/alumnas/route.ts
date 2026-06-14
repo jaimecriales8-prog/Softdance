@@ -15,13 +15,14 @@ export async function POST(request: NextRequest) {
   const escuelaId = await getEscuelaId(supabase, user.id)
   if (!escuelaId) return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
 
-  const { nombre, fecha_nacimiento, notas, grupo_id, familia_id } = await request.json()
+  const { nombre, documento, fecha_nacimiento, notas, grupo_id, familia_id } = await request.json()
   if (!nombre || !familia_id) return NextResponse.json({ error: 'Faltan campos requeridos' }, { status: 400 })
 
   const { data: alumna, error } = await supabase.from('alumnas').insert({
     escuela_id: escuelaId,
     familia_id,
     nombre,
+    documento: documento || null,
     fecha_nacimiento: fecha_nacimiento || null,
     notas: notas || null,
     activa: true,
@@ -59,12 +60,12 @@ export async function PATCH(request: NextRequest) {
   const escuelaId = await getEscuelaId(supabase, user.id)
   if (!escuelaId) return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
 
-  const { id, nombre, fecha_nacimiento, notas } = await request.json()
+  const { id, nombre, documento, fecha_nacimiento, notas } = await request.json()
   if (!id) return NextResponse.json({ error: 'Falta el id' }, { status: 400 })
 
   const { data: alumna, error } = await supabase
     .from('alumnas')
-    .update({ nombre, fecha_nacimiento: fecha_nacimiento || null, notas: notas || null })
+    .update({ nombre, documento: documento || null, fecha_nacimiento: fecha_nacimiento || null, notas: notas || null })
     .eq('id', id)
     .eq('escuela_id', escuelaId)
     .select().single()

@@ -14,7 +14,7 @@ type Alumna = {
 }
 type Familia = { id: string; nombre: string; email: string; telefono: string | null }
 
-const EMPTY_ALUMNA = { nombre: '', fecha_nacimiento: '', notas: '', grupo_id: '' }
+const EMPTY_ALUMNA = { nombre: '', documento: '', fecha_nacimiento: '', notas: '', grupo_id: '' }
 
 function calcularEdad(fecha: string) {
   const hoy = new Date()
@@ -50,6 +50,7 @@ export default function FamiliaDetalleClient({
   function abrirEditar(a: Alumna) {
     setForm({
       nombre: a.nombre,
+      documento: (a as any).documento ?? '',
       fecha_nacimiento: a.fecha_nacimiento ?? '',
       notas: a.notas ?? '',
       grupo_id: grupoActivo(a)?.grupos.id ?? '',
@@ -180,6 +181,12 @@ export default function FamiliaDetalleClient({
                   className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#e91e8c]" />
               </div>
               <div>
+                <label className="block text-xs text-white/50 mb-1">Número de documento</label>
+                <input value={form.documento} onChange={e => setForm({ ...form, documento: e.target.value })}
+                  placeholder="CC, TI..."
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-[#e91e8c]" />
+              </div>
+              <div>
                 <label className="block text-xs text-white/50 mb-1">Fecha de nacimiento</label>
                 <input type="date" value={form.fecha_nacimiento} onChange={e => setForm({ ...form, fecha_nacimiento: e.target.value })}
                   className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#e91e8c]" />
@@ -284,6 +291,7 @@ export default function FamiliaDetalleClient({
                       <p className="text-white font-medium">{a.nombre}</p>
                       <p className="text-white/40 text-xs">
                         {a.fecha_nacimiento ? `${calcularEdad(a.fecha_nacimiento)} años` : 'Sin edad'}
+                        {(a as any).documento ? ` · Doc: ${(a as any).documento}` : ''}
                         {ga ? ` · ${ga.grupos.nombre}${ga.grupos.es_elite ? ' ⭐' : ''}` : ' · Sin grupo'}
                       </p>
                     </div>
