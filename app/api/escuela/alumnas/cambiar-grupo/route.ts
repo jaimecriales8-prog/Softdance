@@ -36,13 +36,15 @@ export async function POST(request: NextRequest) {
   }
 
   // Abrir nuevo grupo
-  const { data: alumnaGrupo, error } = await supabase.from('alumna_grupo').insert({
+  const { data: alumnaGrupo, error } = await supabase.from('alumna_grupo').upsert({
     escuela_id,
     alumna_id,
     grupo_id: nuevo_grupo_id,
     fecha_inicio: hoy,
     activo: true,
-  }).select(`id, fecha_inicio, fecha_fin, activo, grupos(id, nombre, es_elite)`).single()
+    fecha_fin: null,
+  }, { onConflict: 'alumna_id,grupo_id,fecha_inicio' })
+  .select(`id, fecha_inicio, fecha_fin, activo, grupos(id, nombre, es_elite)`).single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
 
