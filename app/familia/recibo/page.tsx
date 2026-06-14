@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import ReciboFamiliaClient from './ReciboFamiliaClient'
 
 export default async function FamiliaReciboPage() {
@@ -9,12 +10,15 @@ export default async function FamiliaReciboPage() {
   const familiaId = perfil!.familia_id
   const escuelaId = perfil!.escuela_id
 
-  const [{ data: familia }, { data: escuela }] = await Promise.all([
-    supabase.from('familias')
-      .select('id, nombre, email, telefono, alumnas(id, nombre)')
-      .eq('id', familiaId).single(),
-    supabase.from('escuelas').select('nombre').eq('id', escuelaId).single(),
+  const service = createServiceClient()
+
+  const [{ data: familia }, { data: escuela }, { data: configPagos }] = await Promise.all([
+    supabase.from('familias').select('id, nombre, email, telefono, alumnas(id, nombre)').eq('id', familiaId).single(),
+    supabase.from('escuelas').select('nombre, info_pago, cobro_activo').eq('id', escuelaId).single(),
+    service.from('config_pagos').select('wompi_pub_key').eq('escuela_id', escuelaId).maybeSingle(),
   ])
+
+  const tieneWompi = !!configPagos?.wompi_pub_key && escuela?.cobro_activo
 
   const [{ data: mensualidades }, { data: eventos }] = await Promise.all([
     supabase.from('mensualidades')
@@ -33,6 +37,8 @@ export default async function FamiliaReciboPage() {
       escuela={escuela!}
       mensualidades={(mensualidades ?? []) as any[]}
       eventos={(eventos ?? []) as any[]}
+      tieneWompi={tieneWompi}
+      infoPago={escuela?.info_pago ?? null}
     />
   )
 }

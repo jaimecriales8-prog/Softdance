@@ -1,5 +1,7 @@
 'use client'
 
+import { useState } from 'react'
+
 const MESES_FULL = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
 
 type Mensualidad = {
@@ -13,7 +15,7 @@ type EventoAlumna = {
   alumnas: { nombre: string }
 }
 type Familia = { id: string; nombre: string; email: string; telefono: string | null; alumnas: { id: string; nombre: string }[] }
-type Escuela = { nombre: string }
+type Escuela = { nombre: string; info_pago?: string | null; cobro_activo?: boolean }
 
 function fmtPeriodo(p: string) {
   const [a, m] = p.split('-').map(Number)
@@ -24,8 +26,50 @@ function fmtFecha(f: string) {
   return new Date(f + 'T12:00:00').toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
-export default function ReciboFamiliaClient({ familia, escuela, mensualidades, eventos }: {
+function PagarButton({ id, tipo, monto, cuotaNumero }: { id: string; tipo: 'mens' | 'evento'; monto: number; cuotaNumero?: number }) {
+  const [loading, setLoading] = useState(false)
+  async function pagar() {
+    setLoading(true)
+    const body = tipo === 'mens' ? { mensualidad_id: id } : { evento_alumna_id: id, cuota_numero: cuotaNumero ?? 1 }
+    const res = await fetch('/api/familia/pagar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+    const data = await res.json()
+    if (res.ok) window.location.href = data.url
+    else setLoading(false)
+  }
+  return (
+    <button onClick={pagar} disabled={loading}
+      className="text-xs bg-[#e91e8c] hover:bg-[#ff3da8] text-white font-medium px-3 py-1 rounded-lg transition-colors disabled:opacity-50 print:hidden">
+      {loading ? '...' : `Pagar $${monto.toLocaleString('es-CO')}`}
+    </button>
+  )
+}
+
+function InfoPagoInline({ info }: { info: string }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <>
+      <button onClick={() => setOpen(true)}
+        className="text-xs border border-white/20 text-white/60 hover:text-white px-3 py-1 rounded-lg transition-colors print:hidden">
+        Ver cómo pagar
+      </button>
+      {open && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50" onClick={() => setOpen(false)}>
+          <div className="bg-[#111] border border-white/10 rounded-2xl p-6 w-full max-w-sm mx-4" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-base font-semibold text-white">Instrucciones de pago</h2>
+              <button onClick={() => setOpen(false)} className="text-white/40 hover:text-white">✕</button>
+            </div>
+            <p className="text-sm text-white/70 whitespace-pre-line leading-relaxed">{info}</p>
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
+
+export default function ReciboFamiliaClient({ familia, escuela, mensualidades, eventos, tieneWompi, infoPago }: {
   familia: Familia; escuela: Escuela; mensualidades: Mensualidad[]; eventos: EventoAlumna[]
+  tieneWompi: boolean; infoPago: string | null
 }) {
   const totalPendienteMens = mensualidades.filter(m => m.estado === 'pendiente').reduce((s, m) => s + m.total, 0)
   const totalPagadoMens = mensualidades.filter(m => m.estado === 'pagado').reduce((s, m) => s + m.total, 0)
@@ -128,9 +172,15 @@ export default function ReciboFamiliaClient({ familia, escuela, mensualidades, e
                         {m.descuento > 0 && <p className="text-xs text-green-400 print:text-green-700">Desc. ${m.descuento.toLocaleString('es-CO')}</p>}
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${m.estado === 'pagado' ? 'bg-green-500/15 text-green-400 print:bg-green-100 print:text-green-700' : 'bg-yellow-500/15 text-yellow-400 print:bg-yellow-100 print:text-yellow-700'}`}>
-                          {m.estado === 'pagado' ? 'Pagado' : 'Pendiente'}
-                        </span>
+                        {m.estado === 'pagado' ? (
+                          <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-green-500/15 text-green-400 print:bg-green-100 print:text-green-700">Pagado</span>
+                        ) : (
+                          <div className="flex flex-col items-end gap-1.5">
+                            <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-yellow-500/15 text-yellow-400 print:bg-yellow-100 print:text-yellow-700">Pendiente</span>
+                            {tieneWompi && <PagarButton id={m.id} tipo="mens" monto={m.total} />}
+                            {!tieneWompi && infoPago && <InfoPagoInline info={infoPago} />}
+                          </div>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -158,6 +208,8 @@ export default function ReciboFamiliaClient({ familia, escuela, mensualidades, e
                   {eventos.map((ev, i) => {
                     const cuotas = ev.cuotas ?? []
                     const pagadas = cuotas.filter(c => c.estado === 'pagado').length
+                    const proxCuota = cuotas.find(c => c.estado === 'pendiente')
+                    const montoCuota = Math.round(ev.total / (cuotas.length || 1))
                     return (
                       <tr key={ev.id} className={i < eventos.length - 1 ? 'border-b border-white/5 print:border-gray-100' : ''}>
                         <td className="px-4 py-3">
@@ -167,9 +219,17 @@ export default function ReciboFamiliaClient({ familia, escuela, mensualidades, e
                         <td className="px-4 py-3 text-white/60 print:text-gray-600 text-sm">{ev.alumnas.nombre}</td>
                         <td className="px-4 py-3 text-right text-white font-medium print:text-black">${ev.total.toLocaleString('es-CO')}</td>
                         <td className="px-4 py-3 text-right">
-                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${ev.estado === 'pagado' ? 'bg-green-500/15 text-green-400 print:bg-green-100 print:text-green-700' : 'bg-yellow-500/15 text-yellow-400 print:bg-yellow-100 print:text-yellow-700'}`}>
-                            {ev.estado === 'pagado' ? 'Pagado' : pagadas > 0 ? `${pagadas}/${ev.eventos.num_cuotas} cuotas` : 'Pendiente'}
-                          </span>
+                          {ev.estado === 'pagado' ? (
+                            <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-green-500/15 text-green-400 print:bg-green-100 print:text-green-700">Pagado</span>
+                          ) : (
+                            <div className="flex flex-col items-end gap-1.5">
+                              <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-yellow-500/15 text-yellow-400 print:bg-yellow-100 print:text-yellow-700">
+                                {pagadas > 0 ? `${pagadas}/${ev.eventos.num_cuotas} cuotas` : 'Pendiente'}
+                              </span>
+                              {tieneWompi && proxCuota && <PagarButton id={ev.id} tipo="evento" monto={montoCuota} cuotaNumero={proxCuota.numero} />}
+                              {!tieneWompi && infoPago && <InfoPagoInline info={infoPago} />}
+                            </div>
+                          )}
                         </td>
                       </tr>
                     )
