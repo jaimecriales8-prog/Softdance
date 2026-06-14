@@ -49,6 +49,7 @@ export async function POST(request: NextRequest) {
   await service.from('perfiles').insert({
     id: authData.user.id,
     escuela_id: escuelaId,
+    familia_id: familia.id,
     rol: 'padre',
     nombre,
     email,
