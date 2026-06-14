@@ -7,9 +7,9 @@ export default async function HorariosPage() {
   const { data: perfil } = await supabase.from('perfiles').select('escuela_id').eq('id', user!.id).single()
   const escuelaId = perfil!.escuela_id
 
-  const [{ data: horarios }, { data: grupos }] = await Promise.all([
+  const [{ data: horarios }, { data: grupos }, { data: actividades }] = await Promise.all([
     supabase.from('horarios')
-      .select('*, grupos(id, nombre, es_elite)')
+      .select('*, grupos(id, nombre, es_elite), actividades_extra(id, nombre)')
       .eq('escuela_id', escuelaId)
       .order('dia_semana').order('hora_inicio'),
     supabase.from('grupos')
@@ -17,7 +17,12 @@ export default async function HorariosPage() {
       .eq('escuela_id', escuelaId)
       .eq('activo', true)
       .order('es_elite').order('nombre'),
+    supabase.from('actividades_extra')
+      .select('id, nombre')
+      .eq('escuela_id', escuelaId)
+      .eq('activa', true)
+      .order('nombre'),
   ])
 
-  return <HorariosClient horarios={horarios ?? []} grupos={grupos ?? []} escuelaId={escuelaId} />
+  return <HorariosClient horarios={horarios ?? []} grupos={grupos ?? []} actividades={actividades ?? []} escuelaId={escuelaId} />
 }
