@@ -62,6 +62,8 @@ export default function GruposClient({ grupos: inicial, escuelaId }: { grupos: G
   const [panelLoading, setPanelLoading] = useState(false)
   const [agregando, setAgregando] = useState(false)
   const [busqueda, setBusqueda] = useState('')
+  const [panelError, setPanelError] = useState('')
+  const [agregandoId, setAgregandoId] = useState<string | null>(null)
 
   const supabase = createClient()
 
@@ -139,15 +141,20 @@ export default function GruposClient({ grupos: inicial, escuelaId }: { grupos: G
 
   async function agregarAlumna(alumna: AlumnaDisponible) {
     if (!grupoActivo) return
+    setPanelError('')
+    setAgregandoId(alumna.id)
     const res = await fetch('/api/escuela/grupos/alumnas', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ alumna_id: alumna.id, grupo_id: grupoActivo.id }),
     })
     const data = await res.json()
+    setAgregandoId(null)
     if (res.ok) {
       setAlumnas(prev => [...prev, data.alumna_grupo])
       setDisponibles(prev => prev.filter(a => a.id !== alumna.id))
+    } else {
+      setPanelError(data.error ?? 'Error al agregar')
     }
   }
 
@@ -305,6 +312,7 @@ export default function GruposClient({ grupos: inicial, escuelaId }: { grupos: G
                     Cancelar
                   </button>
                 </div>
+                {panelError && <p className="px-5 py-2 text-xs text-red-400">{panelError}</p>}
                 {disponiblesFiltradas.length === 0 ? (
                   <p className="text-center text-white/30 text-sm py-8">
                     {disponibles.length === 0 ? 'Todas las alumnas ya están en este grupo' : 'No se encontraron resultados'}
@@ -320,9 +328,9 @@ export default function GruposClient({ grupos: inicial, escuelaId }: { grupos: G
                             {a.fecha_nacimiento ? ` · ${calcularEdad(a.fecha_nacimiento)} años` : ''}
                           </p>
                         </div>
-                        <button onClick={() => agregarAlumna(a)}
-                          className="text-xs bg-[#e91e8c]/10 text-[#e91e8c] hover:bg-[#e91e8c]/20 px-3 py-1 rounded-lg transition-colors">
-                          Agregar
+                        <button onClick={() => agregarAlumna(a)} disabled={agregandoId === a.id}
+                          className="text-xs bg-[#e91e8c]/10 text-[#e91e8c] hover:bg-[#e91e8c]/20 px-3 py-1 rounded-lg transition-colors disabled:opacity-50">
+                          {agregandoId === a.id ? '...' : 'Agregar'}
                         </button>
                       </li>
                     ))}
