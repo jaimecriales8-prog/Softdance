@@ -7,7 +7,7 @@
 - Supabase (PostgreSQL + Auth + RLS + Storage)
 - Tailwind CSS v4
 - Wompi (pagos Colombia) — integrado: checkout + webhook
-- Resend (emails) — integrado: bienvenida + reset de contraseña
+- Resend (emails) — integrado: bienvenida + reset + notificación mensualidad + recordatorio pago
 
 ## Ubicación
 `/Users/jaimecriales/Sites/softdance`
@@ -116,7 +116,9 @@ mi_profesor_id()  -- profesor_id del usuario actual (desde profesores.user_id)
 ## Email — `lib/email.ts`
 - `enviarBienvenida({ email, nombre, password, rol })` — al crear familia, profesor o admin_escuela
 - `enviarResetPassword({ email, nombre, resetUrl })` — desde `/api/auth/forgot-password`
-- Remitente configurable con `EMAIL_FROM` (por defecto `onboarding@resend.dev`)
+- `enviarNuevaMensualidad({ email, nombreFamilia, periodo, total, fechaLimite, detalle })` — al generar mensualidad (cron día 1)
+- `enviarRecordatorioPago({ email, nombreFamilia, periodo, total, fechaLimite })` — 3 días antes del vencimiento (cron diario)
+- Remitente configurable con `EMAIL_FROM` — producción: `Softdance <noreply@ligacaribe.co>`
 
 ## Auth routing
 `app/dashboard/page.tsx` redirige según rol:
@@ -142,6 +144,8 @@ Flujo recuperación de contraseña: `/forgot-password` → email con enlace → 
   - Alumna: nombre, documento, fecha_nacimiento, notas
   - Asignar grupo normal o élite (independientes, no excluyentes)
   - Actividades extra (chips toggle)
+  - Eventos: inscribir con conceptos individuales y valores ajustables; desinscribir
+  - Historial de grupos: cronología de todos los grupos que tuvo la alumna
   - Congelar/descongelar alumna
   - Valor mensual calculado en tiempo real
   - Recibo de pago imprimible (`/escuela/familias/[id]/recibo`)
@@ -157,11 +161,12 @@ Flujo recuperación de contraseña: `/forgot-password` → email con enlace → 
 - **Comunicados** — crear/eliminar avisos; dirigir a grupo específico o todas las familias
 
 ### `/familia` (padre)
-- **Inicio** — alumnas activas, mensualidad del mes con botón Wompi o info de pago manual
+- **Inicio** — mensualidad del mes (con botón Wompi o info pago manual); matrícula pendiente del año; eventos pendientes de pago; alumnas activas
 - **Horarios** — clases de los grupos de sus hijas + export ICS (webcal + descarga)
 - **Mensualidades** — historial con desglose; matrículas del año
 - **Eventos** — participación de sus alumnas, lineas de costo y estado de cuotas
 - **Comunicados** — avisos globales + los del grupo de sus hijas
+- **Mi estado de cuenta** — recibo imprimible: resumen pendiente/pagado de mensualidades y eventos
 
 ### `/profesor` (profesor)
 - Horario semanal de sus grupos y actividades asignadas
@@ -177,9 +182,13 @@ Flujo recuperación de contraseña: `/forgot-password` → email con enlace → 
 - `cobro_activo=true` en escuela + `wompi_pub_key` configurada → botón Pagar visible en portal padres
 
 ## Cron jobs
-- `vercel.json` → `/api/cron/generar-mensualidades` corre el 1 de cada mes a las 6am
-- Genera mensualidades solo para escuelas activas con el mes habilitado en `meses_activos`
-- No duplica si ya existe el período; excluye alumnas congeladas
+- `/api/cron/generar-mensualidades` — día 1 de cada mes a las 6am
+  - Genera mensualidades para escuelas activas con el mes habilitado en `meses_activos`
+  - No duplica si ya existe el período; excluye alumnas congeladas
+  - Envía email `enviarNuevaMensualidad` a cada familia al generar
+- `/api/cron/recordatorio-pago` — diario a las 9am
+  - Busca mensualidades pendientes con `fecha_limite` = hoy + 3 días
+  - Envía email `enviarRecordatorioPago` a cada familia afectada
 
 ## Variables de entorno
 ```
