@@ -19,11 +19,13 @@ export async function POST(request: NextRequest) {
   const { alumna_id, actividad_id } = await request.json()
   if (!alumna_id || !actividad_id) return NextResponse.json({ error: 'Faltan campos' }, { status: 400 })
 
+  const fecha_inicio = new Date().toISOString().split('T')[0]
+
   const { data, error } = await supabase
     .from('alumna_actividad')
     .upsert(
-      { escuela_id: escuelaId, alumna_id, actividad_id, activa: true },
-      { onConflict: 'alumna_id,actividad_id' }
+      { escuela_id: escuelaId, alumna_id, actividad_id, activa: true, fecha_inicio },
+      { onConflict: 'alumna_id,actividad_id,fecha_inicio' }
     )
     .select('id, actividades_extra(id, nombre, precio, es_recurrente)')
     .single()
