@@ -1,27 +1,31 @@
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
+import PagarEventoButton from './PagarEventoButton'
 
 export default async function FamiliaEventosPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   const { data: perfil } = await supabase.from('perfiles').select('familia_id, escuela_id').eq('id', user!.id).single()
 
-  const { data: alumnas } = await supabase
-    .from('alumnas')
-    .select(`
-      id, nombre,
-      evento_alumna(
-        id, total, estado, cuotas, lineas,
-        eventos(id, nombre, fecha)
-      )
-    `)
-    .eq('familia_id', perfil!.familia_id)
-    .eq('activa', true)
-    .order('nombre')
+  const service = createServiceClient()
+  const [{ data: alumnas }, { data: configPagos }, { data: escuela }] = await Promise.all([
+    supabase.from('alumnas')
+      .select(`id, nombre, evento_alumna(id, total, estado, cuotas, lineas, eventos(id, nombre, fecha, num_cuotas))`)
+      .eq('familia_id', perfil!.familia_id)
+      .eq('activa', true)
+      .order('nombre'),
+    service.from('config_pagos').select('wompi_pub_key').eq('escuela_id', perfil!.escuela_id).maybeSingle(),
+    supabase.from('escuelas').select('cobro_activo').eq('id', perfil!.escuela_id).single(),
+  ])
 
-  // Group participation by evento
+  const tieneWompi = !!configPagos?.wompi_pub_key && escuela?.cobro_activo
+
+  type Participante = {
+    eventoAlumnaId: string; alumnaId: string; alumnaNombre: string
+    total: number; estado: string; cuotas: any[]; lineas: any[]; numCuotas: number
+  }
   const eventoMap = new Map<string, {
-    id: string; nombre: string; fecha: string | null
-    participantes: { alumnaId: string; alumnaNombre: string; total: number; estado: string; cuotas: any[]; lineas: any[] }[]
+    id: string; nombre: string; fecha: string | null; participantes: Participante[]
   }>()
 
   for (const alumna of alumnas ?? []) {
@@ -32,12 +36,14 @@ export default async function FamiliaEventosPage() {
         eventoMap.set(ev.id, { id: ev.id, nombre: ev.nombre, fecha: ev.fecha, participantes: [] })
       }
       eventoMap.get(ev.id)!.participantes.push({
+        eventoAlumnaId: ea.id,
         alumnaId: alumna.id,
         alumnaNombre: alumna.nombre,
         total: ea.total ?? 0,
         estado: ea.estado,
         cuotas: ea.cuotas ?? [],
         lineas: ea.lineas ?? [],
+        numCuotas: ev.num_cuotas ?? 1,
       })
     }
   }
@@ -75,12 +81,14 @@ export default async function FamiliaEventosPage() {
                   const cuotasPagadas = p.cuotas.filter((c: any) => c.estado === 'pagado').length
                   const totalCuotas = p.cuotas.length
                   const todosPagado = p.estado === 'pagado'
+                  const montoCuota = totalCuotas > 0 ? Math.round(p.total / totalCuotas) : p.total
+                  const proxCuota = p.cuotas.find((c: any) => c.estado === 'pendiente')
 
                   return (
                     <div key={p.alumnaId} className="px-5 py-4">
-                      <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-start justify-between mb-3 gap-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-[#e91e8c]/20 flex items-center justify-center text-[#e91e8c] text-sm font-bold">
+                          <div className="w-8 h-8 rounded-full bg-[#e91e8c]/20 flex items-center justify-center text-[#e91e8c] text-sm font-bold shrink-0">
                             {p.alumnaNombre.charAt(0).toUpperCase()}
                           </div>
                           <div>
@@ -88,13 +96,24 @@ export default async function FamiliaEventosPage() {
                             <p className="text-white/40 text-xs">Total: ${Number(p.total).toLocaleString('es-CO')}</p>
                           </div>
                         </div>
-                        {todosPagado ? (
-                          <span className="text-xs bg-green-500/20 text-green-400 px-3 py-1 rounded-full">✓ Pagado</span>
-                        ) : (
-                          <span className="text-xs bg-[#e91e8c]/10 text-[#e91e8c] px-3 py-1 rounded-full">
-                            {cuotasPagadas}/{totalCuotas} cuotas
-                          </span>
-                        )}
+                        <div className="flex items-center gap-3 shrink-0">
+                          {todosPagado ? (
+                            <span className="text-xs bg-green-500/20 text-green-400 px-3 py-1 rounded-full">✓ Pagado</span>
+                          ) : (
+                            <>
+                              <span className="text-xs bg-[#e91e8c]/10 text-[#e91e8c] px-3 py-1 rounded-full">
+                                {totalCuotas > 1 ? `${cuotasPagadas}/${totalCuotas} cuotas` : 'Pendiente'}
+                              </span>
+                              {tieneWompi && proxCuota && (
+                                <PagarEventoButton
+                                  eventoAlumnaId={p.eventoAlumnaId}
+                                  cuotaNumero={proxCuota.numero}
+                                  monto={montoCuota}
+                                />
+                              )}
+                            </>
+                          )}
+                        </div>
                       </div>
 
                       {/* Lineas */}

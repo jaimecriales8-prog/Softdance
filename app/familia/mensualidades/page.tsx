@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import PagarButton from './PagarButton'
+import PagarMatriculaButton from './PagarMatriculaButton'
 import InfoPagoButton from '../InfoPagoButton'
 
 const MESES = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
@@ -47,7 +48,11 @@ export default async function FamiliaMensualidadesPage() {
                     {m.estado === 'pagado' ? '✓ Pagada' : 'Pendiente'}
                   </p>
                 </div>
-                <p className="text-white font-bold">${Number(m.valor).toLocaleString('es-CO')}</p>
+                <div className="flex items-center gap-3">
+                  <p className="text-white font-bold">${Number(m.valor).toLocaleString('es-CO')}</p>
+                  {m.estado !== 'pagado' && tieneWompi && <PagarMatriculaButton matriculaId={m.id} />}
+                  {m.estado !== 'pagado' && !tieneWompi && escuela?.info_pago && <InfoPagoButton info={escuela.info_pago} />}
+                </div>
               </div>
             ))}
           </div>
