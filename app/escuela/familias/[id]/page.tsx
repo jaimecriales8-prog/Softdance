@@ -1,0 +1,49 @@
+import { createClient } from '@/lib/supabase/server'
+import { notFound } from 'next/navigation'
+import FamiliaDetalleClient from './FamiliaDetalleClient'
+
+export default async function FamiliaDetallePage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data: perfil } = await supabase.from('perfiles').select('escuela_id').eq('id', user!.id).single()
+  const escuelaId = perfil!.escuela_id
+
+  const { data: familia } = await supabase
+    .from('familias')
+    .select('*')
+    .eq('id', id)
+    .eq('escuela_id', escuelaId)
+    .single()
+
+  if (!familia) notFound()
+
+  const { data: alumnas } = await supabase
+    .from('alumnas')
+    .select(`
+      id, nombre, fecha_nacimiento, foto_url, activa, notas,
+      alumna_grupo(
+        id, fecha_inicio, fecha_fin, activo,
+        grupos(id, nombre, es_elite)
+      )
+    `)
+    .eq('familia_id', id)
+    .eq('escuela_id', escuelaId)
+    .order('nombre')
+
+  const { data: grupos } = await supabase
+    .from('grupos')
+    .select('id, nombre, es_elite, precio_mensual')
+    .eq('escuela_id', escuelaId)
+    .eq('activo', true)
+    .order('es_elite').order('nombre')
+
+  return (
+    <FamiliaDetalleClient
+      familia={familia}
+      alumnas={alumnas ?? []}
+      grupos={grupos ?? []}
+      escuelaId={escuelaId}
+    />
+  )
+}
