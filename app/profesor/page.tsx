@@ -46,9 +46,17 @@ export default async function ProfesorPage() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-white">Mis horarios</h1>
-        <p className="text-white/40 text-sm mt-0.5">{profesor.nombre}</p>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-white">Mis horarios</h1>
+          <p className="text-white/40 text-sm mt-0.5">{profesor.nombre}</p>
+        </div>
+        {porDia.length > 0 && (
+          <a href="/api/profesor/horarios/ics"
+            className="flex items-center gap-2 border border-white/10 text-white/60 hover:text-white hover:border-white/20 text-xs px-3 py-2 rounded-lg transition-colors">
+            <span>📅</span> Exportar a calendario
+          </a>
+        )}
       </div>
 
       {porDia.length === 0 ? (
