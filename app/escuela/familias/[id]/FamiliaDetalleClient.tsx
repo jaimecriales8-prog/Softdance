@@ -5,7 +5,8 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 
 type Grupo = { id: string; nombre: string; es_elite: boolean; precio_mensual: number }
-type AlumnaGrupo = { id: string; fecha_inicio: string; fecha_fin: string | null; activo: boolean; grupos: Grupo | Grupo[] }
+type GrupoBase = { id: string; nombre: string; es_elite: boolean }
+type AlumnaGrupo = { id: string; fecha_inicio: string; fecha_fin: string | null; activo: boolean; grupos: GrupoBase | GrupoBase[] }
 type Alumna = {
   id: string; nombre: string; fecha_nacimiento: string | null
   foto_url: string | null; activa: boolean; notas: string | null
@@ -27,7 +28,7 @@ function grupoActivo(alumna: Alumna) {
   const ag = alumna.alumna_grupo?.find(ag => ag.activo)
   if (!ag) return null
   const g = Array.isArray(ag.grupos) ? ag.grupos[0] : ag.grupos
-  return { ...ag, grupos: g }
+  return { ...ag, grupos: g as GrupoBase }
 }
 
 export default function FamiliaDetalleClient({
