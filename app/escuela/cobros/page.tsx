@@ -18,7 +18,7 @@ export default async function CobrosPage() {
       .order('periodo', { ascending: false })
       .order('created_at', { ascending: false }),
     supabase.from('eventos')
-      .select('*, evento_alumna(id, estado, cuotas, alumnas(id, nombre, familias(nombre)))')
+      .select('*, evento_alumna(id, estado, total, cuotas, lineas, alumnas(id, nombre, familias(nombre)))')
       .eq('escuela_id', escuelaId)
       .order('fecha', { ascending: false }),
   ])

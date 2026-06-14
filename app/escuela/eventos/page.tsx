@@ -9,7 +9,7 @@ export default async function EventosPage() {
 
   const [{ data: eventos }, { data: alumnas }] = await Promise.all([
     supabase.from('eventos')
-      .select('*, evento_alumna(id, estado, cuotas, alumnas(id, nombre, familias(nombre)))')
+      .select('*, evento_alumna(id, estado, total, cuotas, lineas, alumnas(id, nombre, familias(nombre)))')
       .eq('escuela_id', escuelaId)
       .order('fecha', { ascending: false }),
     supabase.from('alumnas')
