@@ -16,11 +16,10 @@ export default async function EscuelaDetallePage({ params }: { params: Promise<{
 
   if (!escuela) notFound()
 
-  const { data: admins } = await service
-    .from('perfiles')
-    .select('id, nombre, email, created_at')
-    .eq('escuela_id', id)
-    .eq('rol', 'admin_escuela')
+  const [{ data: admins }, { data: configPagos }] = await Promise.all([
+    service.from('perfiles').select('id, nombre, email, created_at').eq('escuela_id', id).eq('rol', 'admin_escuela'),
+    service.from('config_pagos').select('wompi_pub_key, wompi_priv_key, wompi_integrity_secret').eq('escuela_id', id).maybeSingle(),
+  ])
 
-  return <EscuelaDetalleClient escuela={escuela} admins={admins ?? []} />
+  return <EscuelaDetalleClient escuela={escuela} admins={admins ?? []} configPagos={configPagos ?? null} />
 }

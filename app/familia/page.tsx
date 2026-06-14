@@ -29,11 +29,11 @@ export default async function FamiliaHomePage() {
 
   const { data: escuela } = await supabase
     .from('escuelas')
-    .select('info_pago')
+    .select('info_pago, cobro_activo')
     .eq('id', perfil!.escuela_id)
     .single()
 
-  const tieneWompi = !!configPagos?.wompi_pub_key
+  const tieneWompi = !!configPagos?.wompi_pub_key && escuela?.cobro_activo
 
   const [{ data: alumnas }, { data: mensualidad }] = await Promise.all([
     supabase.from('alumnas')

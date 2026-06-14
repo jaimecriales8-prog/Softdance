@@ -5,31 +5,31 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
 type Escuela = {
-  id: string
-  nombre: string
-  ciudad: string | null
-  email: string | null
-  telefono: string | null
-  activa: boolean
-  cobro_activo: boolean
-  plan: string
+  id: string; nombre: string; ciudad: string | null; email: string | null
+  telefono: string | null; activa: boolean; cobro_activo: boolean; plan: string
 }
+type Admin = { id: string; nombre: string; email: string; created_at: string }
+type ConfigPagos = { wompi_pub_key: string | null; wompi_priv_key: string | null; wompi_integrity_secret: string | null } | null
 
-type Admin = {
-  id: string
-  nombre: string
-  email: string
-  created_at: string
-}
-
-export default function EscuelaDetalleClient({ escuela, admins: inicialesAdmins }: { escuela: Escuela; admins: Admin[] }) {
+export default function EscuelaDetalleClient({ escuela, admins: inicialesAdmins, configPagos: initialConfig }: {
+  escuela: Escuela; admins: Admin[]; configPagos: ConfigPagos
+}) {
   const router = useRouter()
   const [admins, setAdmins] = useState(inicialesAdmins)
+  const [cobroActivo, setCobroActivo] = useState(escuela.cobro_activo)
+  const [togglingCobro, setTogglingCobro] = useState(false)
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState({ nombre: '', email: '', password: '' })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [wompiForm, setWompiForm] = useState({
+    wompi_pub_key: initialConfig?.wompi_pub_key ?? '',
+    wompi_priv_key: initialConfig?.wompi_priv_key ?? '',
+    wompi_integrity_secret: initialConfig?.wompi_integrity_secret ?? '',
+  })
+  const [savingWompi, setSavingWompi] = useState(false)
+  const [wompiOk, setWompiOk] = useState(false)
 
   async function crearAdmin(e: React.FormEvent) {
     e.preventDefault()
@@ -57,6 +57,29 @@ export default function EscuelaDetalleClient({ escuela, admins: inicialesAdmins 
     setLoading(false)
   }
 
+  async function toggleCobro() {
+    setTogglingCobro(true)
+    const res = await fetch('/api/super-admin/escuelas', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ escuela_id: escuela.id, cobro_activo: !cobroActivo }),
+    })
+    if (res.ok) setCobroActivo(p => !p)
+    setTogglingCobro(false)
+  }
+
+  async function guardarWompi(e: React.FormEvent) {
+    e.preventDefault()
+    setSavingWompi(true); setWompiOk(false)
+    await fetch('/api/super-admin/config-pagos', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ escuela_id: escuela.id, ...wompiForm }),
+    })
+    setSavingWompi(false); setWompiOk(true)
+    setTimeout(() => setWompiOk(false), 2000)
+  }
+
   return (
     <div>
       <div className="flex items-center gap-2 mb-6">
@@ -74,13 +97,20 @@ export default function EscuelaDetalleClient({ escuela, admins: inicialesAdmins 
             <h1 className="text-xl font-bold text-white">{escuela.nombre}</h1>
             <p className="text-white/40 text-sm mt-0.5">{escuela.ciudad} · {escuela.email}</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-3">
             <span className={`text-xs px-2 py-1 rounded-full ${escuela.activa ? 'bg-emerald-500/20 text-emerald-400' : 'bg-white/10 text-white/40'}`}>
               {escuela.activa ? 'Activa' : 'Inactiva'}
             </span>
             <span className={`text-xs px-2 py-1 rounded-full ${escuela.plan === 'pro' ? 'bg-[#e91e8c]/20 text-[#e91e8c]' : 'bg-white/10 text-white/40'}`}>
               {escuela.plan}
             </span>
+            <button
+              onClick={toggleCobro}
+              disabled={togglingCobro}
+              className={`flex items-center gap-2 text-xs px-3 py-1.5 rounded-lg border transition-colors disabled:opacity-50 ${cobroActivo ? 'bg-green-500/10 border-green-500/30 text-green-400' : 'bg-white/5 border-white/10 text-white/40 hover:text-white'}`}>
+              <span className={`w-2 h-2 rounded-full ${cobroActivo ? 'bg-green-400' : 'bg-white/20'}`} />
+              Pagos {cobroActivo ? 'habilitados' : 'deshabilitados'}
+            </button>
           </div>
         </div>
       </div>
@@ -140,6 +170,33 @@ export default function EscuelaDetalleClient({ escuela, admins: inicialesAdmins 
           </div>
         </div>
       )}
+
+      {/* Wompi config */}
+      <div className="bg-white/5 border border-white/10 rounded-xl p-5 mb-6">
+        <h2 className="text-sm font-semibold text-white mb-1">Configuración Wompi</h2>
+        <p className="text-white/40 text-xs mb-4">Credenciales para pagos en línea. Las llaves van en el panel de Wompi → Desarrolladores.</p>
+        <form onSubmit={guardarWompi} className="space-y-3">
+          {[
+            { key: 'wompi_pub_key', label: 'Llave pública (pub_*)' },
+            { key: 'wompi_priv_key', label: 'Llave privada (prv_*)' },
+            { key: 'wompi_integrity_secret', label: 'Secreto de integridad' },
+          ].map(f => (
+            <div key={f.key}>
+              <label className="block text-xs text-white/50 mb-1">{f.label}</label>
+              <input
+                value={(wompiForm as any)[f.key]}
+                onChange={e => setWompiForm({ ...wompiForm, [f.key]: e.target.value })}
+                placeholder={f.key === 'wompi_pub_key' ? 'pub_test_...' : f.key === 'wompi_priv_key' ? 'prv_test_...' : ''}
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white font-mono placeholder-white/20 focus:outline-none focus:border-[#e91e8c]"
+              />
+            </div>
+          ))}
+          <button type="submit" disabled={savingWompi}
+            className="text-xs bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50">
+            {savingWompi ? 'Guardando...' : wompiOk ? '✓ Guardado' : 'Guardar credenciales'}
+          </button>
+        </form>
+      </div>
 
       {/* Lista admins */}
       <div className="bg-white/5 border border-white/10 rounded-xl overflow-hidden">
