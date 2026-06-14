@@ -109,7 +109,7 @@ export async function GET() {
   return new NextResponse(ics, {
     headers: {
       'Content-Type': 'text/calendar; charset=utf-8',
-      'Content-Disposition': `attachment; filename="horarios-${escuela?.nombre ?? 'softdance'}.ics"`,
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
     }
   })
 }

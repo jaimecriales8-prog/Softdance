@@ -99,7 +99,7 @@ export async function GET() {
   return new NextResponse(ics, {
     headers: {
       'Content-Type': 'text/calendar; charset=utf-8',
-      'Content-Disposition': `attachment; filename="mis-clases.ics"`,
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
     }
   })
 }
