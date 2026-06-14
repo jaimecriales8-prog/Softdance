@@ -1,13 +1,18 @@
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
+import PagarButton from './PagarButton'
+import InfoPagoButton from '../InfoPagoButton'
 
 const MESES = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
 
 export default async function FamiliaMensualidadesPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  const { data: perfil } = await supabase.from('perfiles').select('familia_id').eq('id', user!.id).single()
+  const { data: perfil } = await supabase.from('perfiles').select('familia_id, escuela_id').eq('id', user!.id).single()
 
-  const [{ data: mensualidades }, { data: matriculas }] = await Promise.all([
+  const service = createServiceClient()
+
+  const [{ data: mensualidades }, { data: matriculas }, { data: configPagos }, { data: escuela }] = await Promise.all([
     supabase.from('mensualidades')
       .select('id, periodo, subtotal, descuento, total, estado, fecha_limite, detalle')
       .eq('familia_id', perfil!.familia_id)
@@ -16,7 +21,11 @@ export default async function FamiliaMensualidadesPage() {
       .select('id, anio, valor, estado')
       .eq('familia_id', perfil!.familia_id)
       .order('anio', { ascending: false }),
+    service.from('config_pagos').select('wompi_pub_key').eq('escuela_id', perfil!.escuela_id).maybeSingle(),
+    supabase.from('escuelas').select('info_pago, cobro_activo').eq('id', perfil!.escuela_id).single(),
   ])
+
+  const tieneWompi = !!configPagos?.wompi_pub_key && escuela?.cobro_activo
 
   return (
     <div>
@@ -57,8 +66,8 @@ export default async function FamiliaMensualidadesPage() {
             const pagado = m.estado === 'pagado'
             return (
               <div key={m.id} className={`border rounded-xl overflow-hidden ${pagado ? 'bg-white/5 border-white/10' : 'bg-[#e91e8c]/5 border-[#e91e8c]/20'}`}>
-                <div className="px-5 py-4 flex items-center justify-between">
-                  <div>
+                <div className="px-5 py-4 flex items-center justify-between gap-4">
+                  <div className="flex-1">
                     <p className="text-white font-medium">{MESES[mesNum]} {anio}</p>
                     <p className="text-white/40 text-xs">
                       {pagado ? 'Pagado' : m.fecha_limite
@@ -68,9 +77,17 @@ export default async function FamiliaMensualidadesPage() {
                   </div>
                   <div className="text-right">
                     <p className="text-white font-bold text-lg">${Number(m.total).toLocaleString('es-CO')}</p>
-                    <span className={`text-xs font-medium ${pagado ? 'text-green-400' : 'text-[#e91e8c]'}`}>
-                      {pagado ? '✓ Pagado' : 'Pendiente'}
-                    </span>
+                    {pagado ? (
+                      <span className="text-xs font-medium text-green-400">✓ Pagado</span>
+                    ) : (
+                      <div className="flex flex-col gap-1.5 items-end mt-1">
+                        {tieneWompi && <PagarButton mensualidadId={m.id} />}
+                        {escuela?.info_pago && <InfoPagoButton info={escuela.info_pago} />}
+                        {!tieneWompi && !escuela?.info_pago && (
+                          <span className="text-xs text-[#e91e8c]">Pendiente</span>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
 
