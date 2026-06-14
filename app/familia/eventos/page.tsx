@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import PagarEventoButton from './PagarEventoButton'
+import InfoPagoButton from '../InfoPagoButton'
 
 export default async function FamiliaEventosPage() {
   const supabase = await createClient()
@@ -15,7 +16,7 @@ export default async function FamiliaEventosPage() {
       .eq('activa', true)
       .order('nombre'),
     service.from('config_pagos').select('wompi_pub_key').eq('escuela_id', perfil!.escuela_id).maybeSingle(),
-    supabase.from('escuelas').select('cobro_activo').eq('id', perfil!.escuela_id).single(),
+    supabase.from('escuelas').select('cobro_activo, info_pago').eq('id', perfil!.escuela_id).single(),
   ])
 
   const tieneWompi = !!configPagos?.wompi_pub_key && escuela?.cobro_activo
@@ -110,6 +111,9 @@ export default async function FamiliaEventosPage() {
                                   cuotaNumero={proxCuota.numero}
                                   monto={montoCuota}
                                 />
+                              )}
+                              {!tieneWompi && escuela?.info_pago && (
+                                <InfoPagoButton info={escuela.info_pago} />
                               )}
                             </>
                           )}
