@@ -2,27 +2,52 @@
 
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { useRouter } from 'next/navigation'
 
 type Escuela = {
   id: string
   nombre: string
   ciudad: string | null
   email: string | null
+  telefono: string | null
   activa: boolean
   cobro_activo: boolean
   plan: string
   created_at: string
 }
 
+type FormData = { nombre: string; ciudad: string; email: string; telefono: string }
+
+const FIELDS = [
+  { key: 'nombre', label: 'Nombre', required: true },
+  { key: 'ciudad', label: 'Ciudad', required: false },
+  { key: 'email', label: 'Email', required: false },
+  { key: 'telefono', label: 'Teléfono', required: false },
+]
+
+const EMPTY_FORM: FormData = { nombre: '', ciudad: '', email: '', telefono: '' }
+
 export default function EscuelasClient({ escuelas: inicial }: { escuelas: Escuela[] }) {
-  const router = useRouter()
   const [escuelas, setEscuelas] = useState(inicial)
-  const [showForm, setShowForm] = useState(false)
-  const [form, setForm] = useState({ nombre: '', ciudad: '', email: '', telefono: '' })
+  const [modal, setModal] = useState<'crear' | 'editar' | null>(null)
+  const [form, setForm] = useState<FormData>(EMPTY_FORM)
+  const [editId, setEditId] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
   const supabase = createClient()
+
+  function abrirCrear() {
+    setForm(EMPTY_FORM)
+    setEditId(null)
+    setModal('crear')
+  }
+
+  function abrirEditar(e: Escuela) {
+    setForm({ nombre: e.nombre, ciudad: e.ciudad ?? '', email: e.email ?? '', telefono: e.telefono ?? '' })
+    setEditId(e.id)
+    setModal('editar')
+  }
+
+  function cerrar() { setModal(null); setEditId(null); setForm(EMPTY_FORM) }
 
   async function crearEscuela(e: React.FormEvent) {
     e.preventDefault()
@@ -30,12 +55,26 @@ export default function EscuelasClient({ escuelas: inicial }: { escuelas: Escuel
     const { data, error } = await supabase
       .from('escuelas')
       .insert({ ...form, activa: true, cobro_activo: false, plan: 'free' })
-      .select()
-      .single()
+      .select().single()
     if (!error && data) {
       setEscuelas([data, ...escuelas])
-      setForm({ nombre: '', ciudad: '', email: '', telefono: '' })
-      setShowForm(false)
+      cerrar()
+    }
+    setLoading(false)
+  }
+
+  async function editarEscuela(e: React.FormEvent) {
+    e.preventDefault()
+    if (!editId) return
+    setLoading(true)
+    const { data, error } = await supabase
+      .from('escuelas')
+      .update(form)
+      .eq('id', editId)
+      .select().single()
+    if (!error && data) {
+      setEscuelas(escuelas.map(esc => esc.id === editId ? { ...esc, ...data } : esc))
+      cerrar()
     }
     setLoading(false)
   }
@@ -52,26 +91,21 @@ export default function EscuelasClient({ escuelas: inicial }: { escuelas: Escuel
           <h1 className="text-2xl font-bold text-white">Escuelas</h1>
           <p className="text-white/40 text-sm mt-0.5">{escuelas.length} registradas</p>
         </div>
-        <button
-          onClick={() => setShowForm(true)}
-          className="bg-[#e91e8c] hover:bg-[#ff3da8] text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
-        >
+        <button onClick={abrirCrear}
+          className="bg-[#e91e8c] hover:bg-[#ff3da8] text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
           + Nueva escuela
         </button>
       </div>
 
-      {/* Modal crear escuela */}
-      {showForm && (
+      {/* Modal crear / editar */}
+      {modal && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
           <div className="bg-[#111] border border-white/10 rounded-2xl p-6 w-full max-w-md">
-            <h2 className="text-lg font-semibold text-white mb-4">Nueva escuela</h2>
-            <form onSubmit={crearEscuela} className="space-y-3">
-              {[
-                { key: 'nombre', label: 'Nombre', required: true },
-                { key: 'ciudad', label: 'Ciudad', required: false },
-                { key: 'email', label: 'Email', required: false },
-                { key: 'telefono', label: 'Teléfono', required: false },
-              ].map(f => (
+            <h2 className="text-lg font-semibold text-white mb-4">
+              {modal === 'crear' ? 'Nueva escuela' : 'Editar escuela'}
+            </h2>
+            <form onSubmit={modal === 'crear' ? crearEscuela : editarEscuela} className="space-y-3">
+              {FIELDS.map(f => (
                 <div key={f.key}>
                   <label className="block text-xs text-white/50 mb-1">{f.label}</label>
                   <input
@@ -83,13 +117,13 @@ export default function EscuelasClient({ escuelas: inicial }: { escuelas: Escuel
                 </div>
               ))}
               <div className="flex gap-2 pt-2">
-                <button type="button" onClick={() => setShowForm(false)}
+                <button type="button" onClick={cerrar}
                   className="flex-1 border border-white/10 text-white/60 text-sm py-2 rounded-lg hover:bg-white/5 transition-colors">
                   Cancelar
                 </button>
                 <button type="submit" disabled={loading}
                   className="flex-1 bg-[#e91e8c] hover:bg-[#ff3da8] text-white text-sm py-2 rounded-lg disabled:opacity-50 transition-colors">
-                  {loading ? 'Guardando...' : 'Crear escuela'}
+                  {loading ? 'Guardando...' : modal === 'crear' ? 'Crear escuela' : 'Guardar cambios'}
                 </button>
               </div>
             </form>
@@ -107,11 +141,12 @@ export default function EscuelasClient({ escuelas: inicial }: { escuelas: Escuel
               <th className="text-center text-white/40 text-xs uppercase tracking-wider px-4 py-3">Activa</th>
               <th className="text-center text-white/40 text-xs uppercase tracking-wider px-4 py-3">Cobro</th>
               <th className="text-left text-white/40 text-xs uppercase tracking-wider px-4 py-3">Plan</th>
+              <th className="px-4 py-3"></th>
             </tr>
           </thead>
           <tbody>
             {escuelas.length === 0 && (
-              <tr><td colSpan={5} className="text-center text-white/30 py-8">No hay escuelas registradas</td></tr>
+              <tr><td colSpan={6} className="text-center text-white/30 py-8">No hay escuelas registradas</td></tr>
             )}
             {escuelas.map(e => (
               <tr key={e.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
@@ -136,6 +171,12 @@ export default function EscuelasClient({ escuelas: inicial }: { escuelas: Escuel
                   <span className={`text-xs px-2 py-0.5 rounded-full ${e.plan === 'pro' ? 'bg-[#e91e8c]/20 text-[#e91e8c]' : 'bg-white/10 text-white/50'}`}>
                     {e.plan}
                   </span>
+                </td>
+                <td className="px-4 py-3 text-right">
+                  <button onClick={() => abrirEditar(e)}
+                    className="text-xs text-white/40 hover:text-white transition-colors px-2 py-1 rounded hover:bg-white/5">
+                    Editar
+                  </button>
                 </td>
               </tr>
             ))}
