@@ -94,6 +94,28 @@ export default function FamiliaDetalleClient({
     setEditId(a.id); setError(''); setModal('editar')
   }
 
+  async function quitarGrupo(alumna: Alumna, esElite: boolean) {
+    await fetch('/api/escuela/alumnas/quitar-grupo', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ alumna_id: alumna.id, es_elite: esElite }),
+    })
+    const hoy = new Date().toISOString().split('T')[0]
+    setAlumnas(alumnas.map(a => {
+      if (a.id !== alumna.id) return a
+      return {
+        ...a,
+        alumna_grupo: a.alumna_grupo.map(ag => {
+          const g = Array.isArray(ag.grupos) ? ag.grupos[0] : ag.grupos
+          if (ag.activo && (g as GrupoBase)?.es_elite === esElite) {
+            return { ...ag, activo: false, fecha_fin: hoy }
+          }
+          return ag
+        }),
+      }
+    }))
+  }
+
   function abrirCambiarGrupo(a: Alumna, esElite: boolean) {
     const ga = gruposActivos(a).find(ag => ag.grupos.es_elite === esElite)
     setForm({ ...EMPTY_ALUMNA, grupo_id: ga?.grupos.id ?? '' })
@@ -508,6 +530,12 @@ export default function FamiliaDetalleClient({
                       <button onClick={() => abrirCambiarGrupo(a, true)}
                         className="text-xs text-white/30 hover:text-[#e91e8c] transition-colors px-2 py-1 rounded hover:bg-[#e91e8c]/10">
                         ⭐ Élite
+                      </button>
+                    )}
+                    {gasActivos.some(ag => ag.grupos.es_elite) && (
+                      <button onClick={() => quitarGrupo(a, true)}
+                        className="text-xs text-white/30 hover:text-red-400 transition-colors px-2 py-1 rounded hover:bg-red-500/10">
+                        Quitar élite
                       </button>
                     )}
                     {actividades.length > 0 && (
