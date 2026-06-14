@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import Link from 'next/link'
 
 type Escuela = {
   id: string
@@ -261,7 +262,11 @@ export default function EscuelasClient({ escuelas: inicial }: { escuelas: Escuel
                     {pagosConfig[e.id] ? '✓ Configurado' : 'Configurar'}
                   </button>
                 </td>
-                <td className="px-4 py-3 text-right">
+                <td className="px-4 py-3 text-right flex items-center justify-end gap-1">
+                  <Link href={`/super-admin/escuelas/${e.id}`}
+                    className="text-xs text-white/40 hover:text-white transition-colors px-2 py-1 rounded hover:bg-white/5">
+                    Ver
+                  </Link>
                   <button onClick={() => abrirEditar(e)}
                     className="text-xs text-white/40 hover:text-white transition-colors px-2 py-1 rounded hover:bg-white/5">
                     Editar
