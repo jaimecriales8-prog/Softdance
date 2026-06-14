@@ -21,11 +21,9 @@ export default async function FamiliaDetallePage({ params }: { params: Promise<{
   const { data: alumnas } = await supabase
     .from('alumnas')
     .select(`
-      id, nombre, fecha_nacimiento, foto_url, activa, notas,
-      alumna_grupo(
-        id, fecha_inicio, fecha_fin, activo,
-        grupos(id, nombre, es_elite)
-      )
+      id, nombre, documento, fecha_nacimiento, foto_url, activa, notas,
+      alumna_grupo(id, fecha_inicio, fecha_fin, activo, grupos(id, nombre, es_elite)),
+      alumna_actividad(id, actividades_extra(id, nombre, precio, es_recurrente))
     `)
     .eq('familia_id', id)
     .eq('escuela_id', escuelaId)
@@ -38,11 +36,19 @@ export default async function FamiliaDetallePage({ params }: { params: Promise<{
     .eq('activo', true)
     .order('es_elite').order('nombre')
 
+  const { data: actividades } = await supabase
+    .from('actividades_extra')
+    .select('id, nombre, precio, es_recurrente')
+    .eq('escuela_id', escuelaId)
+    .eq('activa', true)
+    .order('nombre')
+
   return (
     <FamiliaDetalleClient
       familia={familia}
       alumnas={alumnas ?? []}
       grupos={grupos ?? []}
+      actividades={actividades ?? []}
       escuelaId={escuelaId}
     />
   )
