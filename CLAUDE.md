@@ -22,14 +22,15 @@
 Cada escuela es un tenant independiente. El `escuela_id` es la barrera de RLS entre tenants.
 
 ```
-super_admin (Jaime — tú)
+super_admin (Jaime)
   └── Escuela (tenant)
         ├── admin_escuela
         └── padre (familia)
+              └── alumnas
 ```
 
 ## Roles del sistema
-- `super_admin` → tú, gestiona todas las escuelas, sin `escuela_id`
+- `super_admin` → gestiona todas las escuelas, sin `escuela_id`
 - `admin_escuela` → dueña/coordinadora de una escuela
 - `padre` → ve solo sus hijas, horarios y pagos
 
@@ -37,27 +38,43 @@ super_admin (Jaime — tú)
 
 ```
 escuelas
-  ├── activa (boolean) — tú la activas
-  ├── cobro_activo (boolean) — toggle si les cobras o no
-  └── plan: 'free' | 'pro'
+  ├── activa, cobro_activo, plan
+  ├── valor_matricula
+  └── meses_activos (integer[]) — meses habilitados para cobro
 
-familias → alumnas → alumna_grupo (grupo base)
-                   → alumna_actividad (actividades extra)
+familias → alumnas
+  ├── activa, congelada (alumnas congeladas se excluyen del cobro)
+  ├── documento (CC, TI)
+  ├── alumna_grupo (historial de grupos — un registro por asignación)
+  │     ├── activo=true → grupo actual
+  │     └── activo=false, fecha_fin → historial
+  └── alumna_actividad (actividades extra asignadas)
 
-grupos (es_elite=false → grupo normal por edad)
-grupos (es_elite=true  → grupo élite)
+grupos
+  ├── es_elite=false → grupo normal por edad (precio_mensual)
+  └── es_elite=true  → grupo élite (NO excluyente — alumna puede tener ambos simultáneamente)
 
-horarios → por grupo (día, hora_inicio, hora_fin, salon, profesora)
+horarios → por grupo o actividad_extra (dia, hora_inicio, hora_fin, salon, profesora)
+
+actividades_extra
+  ├── es_recurrente=true  → suma al cobro mensual
+  └── es_recurrente=false → pago único
 
 mensualidades → por familia, por período "YYYY-MM"
-  └── detalle (jsonb) → desglose por alumna
+  ├── subtotal, descuento, total
+  ├── estado: 'pendiente' | 'pagado'
+  ├── fecha_limite
+  └── detalle (jsonb) → [{ alumna, lineas: [{ concepto, valor }] }]
 
-pagos → transacciones Wompi, linked a mensualidad
+pagos → transacciones Wompi (pendiente)
+comunicados → (pendiente)
+config_pagos → wompi_pub_key, wompi_priv_key por escuela
 ```
 
 ## Tablas en BD (todas con RLS)
 `escuelas`, `perfiles`, `familias`, `alumnas`, `grupos`, `alumna_grupo`,
-`actividades_extra`, `alumna_actividad`, `horarios`, `mensualidades`, `pagos`, `comunicados`
+`actividades_extra`, `alumna_actividad`, `horarios`, `mensualidades`, `pagos`,
+`comunicados`, `config_pagos`
 
 ## Helpers RLS
 ```sql
@@ -69,56 +86,66 @@ mi_familia_id()  -- familia_id del padre actual
 ## Clientes Supabase
 - `lib/supabase/client.ts` → browser (componentes cliente)
 - `lib/supabase/server.ts` → server components y route handlers
-- `lib/supabase/service.ts` → service role (bypasa RLS para operaciones admin)
+- `lib/supabase/service.ts` → service role (bypasa RLS para cron y operaciones admin)
 
-## Proxy (auth routing)
-`proxy.ts` en raíz — reemplaza middleware (deprecated en Next.js 16).
-- Sin sesión → redirige a `/login`
-- Con sesión en `/login` → redirige a `/dashboard`
-- Rutas públicas: `/login`, `/registro`, `/auth`
+## Auth routing
+`app/dashboard/page.tsx` redirige según rol:
+- `super_admin` → `/super-admin`
+- `admin_escuela` → `/escuela`
+- `padre` → `/familia`
 
-## Flujo de desarrollo
-1. Desarrollar en local: `cd ~/Sites/softdance && source ~/.nvm/nvm.sh && npm run dev`
-2. Commit + push a `main` → Vercel auto-despliega
+No hay `proxy.ts` ni `middleware.ts` activos.
+
+## Rutas implementadas
+
+### `/super-admin`
+- Lista y gestión de escuelas (crear, editar, activar/desactivar, toggle cobro)
+- Configurar Wompi por escuela (pub_key + priv_key en config_pagos)
+- Crear admin_escuela desde el panel de detalle de escuela
+
+### `/escuela` (admin_escuela)
+- **Dashboard** — stats: grupos, familias, alumnas
+- **Grupos** — CRUD grupos normales y élite, panel lateral con alumnas del grupo (agregar/quitar)
+- **Familias** — CRUD familias, detalle con alumnas por familia
+  - Alumna: nombre, documento, fecha_nacimiento, notas, grupo inicial
+  - Cambiar grupo normal o élite (independientes, no excluyentes)
+  - Actividades extra por alumna (chips toggle)
+  - Congelar/descongelar alumna (excluye del cobro mensual)
+  - Valor mensual calculado en tiempo real (grupos + actividades recurrentes)
+- **Horarios** — por grupo o actividad extra, agrupados por día
+- **Actividades extra** — CRUD, precio, tipo (mensual/único), toggle activa
+- **Tarifas** — edición inline: matrícula anual, precio por grupo, precio por actividad
+- **Mensualidades** — configurar meses activos, generar por período, marcar pagada, ver detalle
+
+### `/familia` (padre)
+- **Inicio** — alumnas activas con grupos/actividades, mensualidad del mes actual
+- **Horarios** — clases de los grupos de sus hijas
+- **Mensualidades** — historial con desglose por alumna
+
+## Cron jobs
+- `vercel.json` → `/api/cron/generar-mensualidades` corre el 1 de cada mes a las 6am
+- Genera mensualidades solo para escuelas activas con el mes habilitado en `meses_activos`
+- No duplica si ya existe el período
+- Excluye alumnas congeladas
 
 ## Variables de entorno
 ```
 NEXT_PUBLIC_SUPABASE_URL
 NEXT_PUBLIC_SUPABASE_ANON_KEY
 SUPABASE_SERVICE_ROLE_KEY
+CRON_SECRET              ← para autenticar el cron de Vercel
 ```
-Están en `.env.local` (local) y en Vercel Production.
 
-## Módulos planificados
-
-### Panel super_admin
-- Gestión de escuelas (crear, activar/desactivar, toggle cobro)
-- Ver todas las escuelas y sus estados
-
-### Panel admin_escuela
-- Estudiantes: CRUD alumnas, asignar familia
-- Grupos: crear por edad, gestionar élite
-- Actividades extra: crear, asignar por alumna
-- Horarios: días/horas por grupo
-- Mensualidades: generar cobros, ver estado pagos
-- Comunicados: avisos por grupo o globales
-
-### Portal padre
-- Ver hijas, grupos y actividades
-- Horario semanal de cada hija
-- Mensualidad del mes con desglose y botón pagar (Wompi)
-- Comunicados de la escuela
-
-## Convención de rutas planificada
-```
-/dashboard              → redirige según rol
-/super-admin/...        → gestión de escuelas
-/escuela/...            → panel admin_escuela
-/familia/...            → portal padres
-```
+## Pendiente
+- **Wompi** — integración de pagos, link de pago en portal padres, webhook
+- **Comunicados** — avisos por grupo o globales
+- **Matrícula** — cobro de matrícula anual (campo valor_matricula ya existe en escuelas)
+- **Descuentos** — campo descuento ya existe en mensualidades, falta UI
+- **Portal padres** — botón pagar (requiere Wompi)
 
 ## Notas importantes
-- `proxy.ts` exporta función `proxy` (no `middleware`) — cambio de Next.js 16
-- `super_admin` tiene `escuela_id = NULL` en perfiles
-- El cobro a escuelas es opcional por toggle — no todas pagan
-- Wompi y Resend pendientes de integrar
+- Grupos élite NO son excluyentes: alumna puede tener grupo normal + élite simultáneamente
+- `alumna_grupo` tiene unique constraint `(alumna_id, grupo_id, fecha_inicio)` — usar check-then-insert
+- `alumna_actividad` tiene unique constraint `(alumna_id, actividad_id, fecha_inicio)` — usar upsert
+- `alumnas.congelada = true` → excluida de mensualidades pero sigue en el sistema
+- El token de Supabase Management API está disponible para queries directas desde scripts Node
