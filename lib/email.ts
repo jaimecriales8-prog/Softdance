@@ -1,9 +1,18 @@
-import { Resend } from 'resend'
-
-const resend = new Resend(process.env.RESEND_API_KEY)
-
+const RESEND_API_KEY = process.env.RESEND_API_KEY
 const FROM = process.env.EMAIL_FROM ?? 'Softdance <onboarding@resend.dev>'
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://softdance.vercel.app'
+
+async function sendEmail({ to, subject, html }: { to: string; subject: string; html: string }) {
+  if (!RESEND_API_KEY) return
+  await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${RESEND_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ from: FROM, to, subject, html }),
+  })
+}
 
 export async function enviarBienvenida({
   email, nombre, password, rol,
@@ -18,20 +27,19 @@ export async function enviarBienvenida({
     : rol === 'profesor' ? 'Portal de profesores'
     : 'Panel de administración'
 
-  await resend.emails.send({
-    from: FROM,
+  await sendEmail({
     to: email,
-    subject: `Bienvenido/a a Softdance — tus datos de acceso`,
+    subject: 'Bienvenido/a a Softdance — tus datos de acceso',
     html: emailHtml(`Bienvenido/a, ${nombre}`, `
       <p>Tu cuenta en <strong>Softdance</strong> ha sido creada. Aquí están tus datos de acceso:</p>
       <table style="margin:24px 0;width:100%;border-collapse:collapse">
         <tr>
-          <td style="padding:10px 14px;background:#1a1a1a;border-radius:8px 8px 0 0;color:#999;font-size:12px;text-transform:uppercase;letter-spacing:0.05em">Correo</td>
-          <td style="padding:10px 14px;background:#111;border-radius:8px 8px 0 0;color:#fff;font-size:14px">${email}</td>
+          <td style="padding:10px 14px;background:#1a1a1a;color:#999;font-size:12px;text-transform:uppercase;letter-spacing:0.05em;border-radius:8px 8px 0 0">Correo</td>
+          <td style="padding:10px 14px;background:#111;color:#fff;font-size:14px;border-radius:8px 8px 0 0">${email}</td>
         </tr>
         <tr>
-          <td style="padding:10px 14px;background:#1a1a1a;border-radius:0 0 8px 8px;color:#999;font-size:12px;text-transform:uppercase;letter-spacing:0.05em">Contraseña</td>
-          <td style="padding:10px 14px;background:#111;border-radius:0 0 8px 8px;color:#fff;font-size:14px;font-family:monospace">${password}</td>
+          <td style="padding:10px 14px;background:#1a1a1a;color:#999;font-size:12px;text-transform:uppercase;letter-spacing:0.05em;border-radius:0 0 8px 8px">Contraseña</td>
+          <td style="padding:10px 14px;background:#111;color:#fff;font-size:14px;font-family:monospace;border-radius:0 0 8px 8px">${password}</td>
         </tr>
       </table>
       <p style="color:#999">Te recomendamos cambiar tu contraseña después de ingresar por primera vez.</p>
@@ -47,17 +55,16 @@ export async function enviarResetPassword({
 }: {
   email: string; nombre: string; resetUrl: string
 }) {
-  await resend.emails.send({
-    from: FROM,
+  await sendEmail({
     to: email,
-    subject: `Restablecer contraseña — Softdance`,
+    subject: 'Restablecer contraseña — Softdance',
     html: emailHtml('Restablecer contraseña', `
       <p>Hola${nombre ? `, ${nombre}` : ''}. Recibimos una solicitud para restablecer la contraseña de tu cuenta.</p>
       <p style="color:#999;font-size:13px">Este enlace expira en 1 hora.</p>
       <a href="${resetUrl}" style="display:inline-block;margin-top:16px;background:#e91e8c;color:#fff;text-decoration:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:600">
         Restablecer contraseña
       </a>
-      <p style="margin-top:24px;color:#666;font-size:12px">Si no solicitaste esto, ignora este correo. Tu contraseña no cambiará.</p>
+      <p style="margin-top:24px;color:#666;font-size:12px">Si no solicitaste esto, ignora este correo.</p>
     `),
   })
 }
