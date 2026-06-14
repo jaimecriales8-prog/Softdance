@@ -2,6 +2,16 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function proxy(request: NextRequest) {
+  const { pathname } = request.nextUrl
+
+  const publicPaths = ['/login', '/registro', '/auth']
+  const isPublic = publicPaths.some(p => pathname.startsWith(p))
+
+  // Rutas públicas pasan directo sin verificar sesión
+  if (isPublic) {
+    return NextResponse.next({ request })
+  }
+
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(
@@ -22,17 +32,9 @@ export async function proxy(request: NextRequest) {
   )
 
   const { data: { user } } = await supabase.auth.getUser()
-  const { pathname } = request.nextUrl
 
-  const publicPaths = ['/login', '/registro', '/auth']
-  const isPublic = publicPaths.some(p => pathname.startsWith(p))
-
-  if (!user && !isPublic) {
+  if (!user) {
     return NextResponse.redirect(new URL('/login', request.url))
-  }
-
-  if (user && pathname === '/login') {
-    return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
   return supabaseResponse
