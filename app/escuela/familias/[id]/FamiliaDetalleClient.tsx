@@ -31,6 +31,13 @@ function grupoActivo(alumna: Alumna) {
   return { ...ag, grupos: g as GrupoBase }
 }
 
+function gruposActivos(alumna: Alumna) {
+  return alumna.alumna_grupo
+    ?.filter(ag => ag.activo)
+    .map(ag => ({ ...ag, grupos: (Array.isArray(ag.grupos) ? ag.grupos[0] : ag.grupos) as GrupoBase }))
+    ?? []
+}
+
 export default function FamiliaDetalleClient({
   familia, alumnas: inicialesAlumnas, grupos, escuelaId
 }: {
@@ -38,6 +45,7 @@ export default function FamiliaDetalleClient({
 }) {
   const [alumnas, setAlumnas] = useState(inicialesAlumnas)
   const [modal, setModal] = useState<'crear' | 'editar' | 'cambiar_grupo' | null>(null)
+  const [cambiarTipoElite, setCambiarTipoElite] = useState(false)
   const [form, setForm] = useState(EMPTY_ALUMNA)
   const [editId, setEditId] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -58,8 +66,10 @@ export default function FamiliaDetalleClient({
     setEditId(a.id); setError(''); setModal('editar')
   }
 
-  function abrirCambiarGrupo(a: Alumna) {
-    setForm({ ...EMPTY_ALUMNA, grupo_id: grupoActivo(a)?.grupos.id ?? '' })
+  function abrirCambiarGrupo(a: Alumna, esElite: boolean) {
+    const ga = gruposActivos(a).find(ag => ag.grupos.es_elite === esElite)
+    setForm({ ...EMPTY_ALUMNA, grupo_id: ga?.grupos.id ?? '' })
+    setCambiarTipoElite(esElite)
     setEditId(a.id); setError(''); setModal('cambiar_grupo')
   }
 
@@ -235,7 +245,9 @@ export default function FamiliaDetalleClient({
       {modal === 'cambiar_grupo' && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
           <div className="bg-[#111] border border-white/10 rounded-2xl p-6 w-full max-w-md">
-            <h2 className="text-lg font-semibold text-white mb-1">Cambiar de grupo</h2>
+            <h2 className="text-lg font-semibold text-white mb-1">
+              Cambiar {cambiarTipoElite ? 'grupo élite' : 'grupo'}
+            </h2>
             <p className="text-white/40 text-xs mb-4">El grupo anterior quedará en el historial de la alumna.</p>
             <form onSubmit={cambiarGrupo} className="space-y-3">
               <div>
@@ -243,16 +255,9 @@ export default function FamiliaDetalleClient({
                 <select required value={form.grupo_id} onChange={e => setForm({ ...form, grupo_id: e.target.value })}
                   className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#e91e8c]">
                   <option value="">Seleccionar grupo</option>
-                  {normales.length > 0 && (
-                    <optgroup label="Grupos por edad">
-                      {normales.map(g => <option key={g.id} value={g.id}>{g.nombre}</option>)}
-                    </optgroup>
-                  )}
-                  {elite.length > 0 && (
-                    <optgroup label="Grupos élite">
-                      {elite.map(g => <option key={g.id} value={g.id}>{g.nombre}</option>)}
-                    </optgroup>
-                  )}
+                  {(cambiarTipoElite ? elite : normales).map(g => (
+                    <option key={g.id} value={g.id}>{g.nombre}</option>
+                  ))}
                 </select>
               </div>
               {error && <p className="text-sm text-red-400">{error}</p>}
@@ -292,15 +297,27 @@ export default function FamiliaDetalleClient({
                       <p className="text-white/40 text-xs">
                         {a.fecha_nacimiento ? `${calcularEdad(a.fecha_nacimiento)} años` : 'Sin edad'}
                         {(a as any).documento ? ` · Doc: ${(a as any).documento}` : ''}
-                        {ga ? ` · ${ga.grupos.nombre}${ga.grupos.es_elite ? ' ⭐' : ''}` : ' · Sin grupo'}
+                        {' · '}
+                        {gruposActivos(a).length === 0
+                          ? 'Sin grupo'
+                          : gruposActivos(a).map(ag => `${ag.grupos.nombre}${ag.grupos.es_elite ? ' ⭐' : ''}`).join(' + ')
+                        }
                       </p>
                     </div>
                   </div>
                   <div className="flex gap-1">
-                    <button onClick={() => abrirCambiarGrupo(a)}
-                      className="text-xs text-[#e91e8c]/70 hover:text-[#e91e8c] transition-colors px-2 py-1 rounded hover:bg-[#e91e8c]/10">
-                      Cambiar grupo
-                    </button>
+                    {normales.length > 0 && (
+                      <button onClick={() => abrirCambiarGrupo(a, false)}
+                        className="text-xs text-[#e91e8c]/70 hover:text-[#e91e8c] transition-colors px-2 py-1 rounded hover:bg-[#e91e8c]/10">
+                        Cambiar grupo
+                      </button>
+                    )}
+                    {elite.length > 0 && (
+                      <button onClick={() => abrirCambiarGrupo(a, true)}
+                        className="text-xs text-white/30 hover:text-[#e91e8c] transition-colors px-2 py-1 rounded hover:bg-[#e91e8c]/10">
+                        ⭐ Élite
+                      </button>
+                    )}
                     <button onClick={() => abrirEditar(a)}
                       className="text-xs text-white/40 hover:text-white transition-colors px-2 py-1 rounded hover:bg-white/5">
                       Editar

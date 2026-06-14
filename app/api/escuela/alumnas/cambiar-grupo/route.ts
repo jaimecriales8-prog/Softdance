@@ -14,11 +14,26 @@ export async function POST(request: NextRequest) {
 
   const hoy = new Date().toISOString().split('T')[0]
 
-  // Cerrar grupo actual
-  await supabase.from('alumna_grupo')
-    .update({ activo: false, fecha_fin: hoy })
+  // Obtener tipo del nuevo grupo (élite o normal)
+  const { data: nuevoGrupo } = await supabase.from('grupos').select('es_elite').eq('id', nuevo_grupo_id).single()
+
+  // Cerrar solo el grupo activo del mismo tipo
+  const { data: gruposActivos } = await supabase
+    .from('alumna_grupo')
+    .select('id, grupos(es_elite)')
     .eq('alumna_id', alumna_id)
     .eq('activo', true)
+
+  const mismTipo = (gruposActivos ?? []).filter((ag: any) => {
+    const g = Array.isArray(ag.grupos) ? ag.grupos[0] : ag.grupos
+    return g?.es_elite === nuevoGrupo?.es_elite
+  })
+
+  if (mismTipo.length > 0) {
+    await supabase.from('alumna_grupo')
+      .update({ activo: false, fecha_fin: hoy })
+      .in('id', mismTipo.map((ag: any) => ag.id))
+  }
 
   // Abrir nuevo grupo
   const { data: alumnaGrupo, error } = await supabase.from('alumna_grupo').insert({

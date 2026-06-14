@@ -70,12 +70,24 @@ export async function POST(request: NextRequest) {
   const { alumna_id, grupo_id } = await request.json()
   if (!alumna_id || !grupo_id) return NextResponse.json({ error: 'Faltan campos' }, { status: 400 })
 
-  // Cerrar grupo actual si tiene
-  await supabase
+  // Obtener tipo del grupo destino y cerrar solo el activo del mismo tipo
+  const { data: grupoDestino } = await supabase.from('grupos').select('es_elite').eq('id', grupo_id).single()
+  const { data: gruposActivos } = await supabase
     .from('alumna_grupo')
-    .update({ activo: false, fecha_fin: new Date().toISOString().split('T')[0] })
+    .select('id, grupos(es_elite)')
     .eq('alumna_id', alumna_id)
     .eq('activo', true)
+
+  const mismoTipo = (gruposActivos ?? []).filter((ag: any) => {
+    const g = Array.isArray(ag.grupos) ? ag.grupos[0] : ag.grupos
+    return g?.es_elite === grupoDestino?.es_elite
+  })
+
+  if (mismoTipo.length > 0) {
+    await supabase.from('alumna_grupo')
+      .update({ activo: false, fecha_fin: new Date().toISOString().split('T')[0] })
+      .in('id', mismoTipo.map((ag: any) => ag.id))
+  }
 
   const { data, error } = await supabase
     .from('alumna_grupo')
