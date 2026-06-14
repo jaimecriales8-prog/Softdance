@@ -7,11 +7,16 @@ export default async function FamiliaMensualidadesPage() {
   const { data: { user } } = await supabase.auth.getUser()
   const { data: perfil } = await supabase.from('perfiles').select('familia_id').eq('id', user!.id).single()
 
-  const { data: mensualidades } = await supabase
-    .from('mensualidades')
-    .select('id, periodo, subtotal, descuento, total, estado, fecha_limite, detalle')
-    .eq('familia_id', perfil!.familia_id)
-    .order('periodo', { ascending: false })
+  const [{ data: mensualidades }, { data: matriculas }] = await Promise.all([
+    supabase.from('mensualidades')
+      .select('id, periodo, subtotal, descuento, total, estado, fecha_limite, detalle')
+      .eq('familia_id', perfil!.familia_id)
+      .order('periodo', { ascending: false }),
+    supabase.from('matriculas')
+      .select('id, anio, valor, estado')
+      .eq('familia_id', perfil!.familia_id)
+      .order('anio', { ascending: false }),
+  ])
 
   return (
     <div>
@@ -20,6 +25,27 @@ export default async function FamiliaMensualidadesPage() {
         <p className="text-white/40 text-sm mt-0.5">Historial de cobros</p>
       </div>
 
+      {/* Matrículas */}
+      {(matriculas ?? []).length > 0 && (
+        <div className="mb-6">
+          <h2 className="text-sm font-medium text-white/50 uppercase tracking-wider mb-3">Matrículas</h2>
+          <div className="space-y-2">
+            {(matriculas ?? []).map(m => (
+              <div key={m.id} className={`border rounded-xl px-5 py-3 flex items-center justify-between ${m.estado === 'pagado' ? 'bg-white/5 border-white/10' : 'bg-[#e91e8c]/5 border-[#e91e8c]/20'}`}>
+                <div>
+                  <p className="text-white font-medium">Matrícula {m.anio}</p>
+                  <p className={`text-xs ${m.estado === 'pagado' ? 'text-green-400' : 'text-[#e91e8c]'}`}>
+                    {m.estado === 'pagado' ? '✓ Pagada' : 'Pendiente'}
+                  </p>
+                </div>
+                <p className="text-white font-bold">${Number(m.valor).toLocaleString('es-CO')}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <h2 className="text-sm font-medium text-white/50 uppercase tracking-wider mb-3">Mensualidades</h2>
       {!mensualidades?.length ? (
         <div className="bg-white/5 border border-white/10 rounded-xl px-4 py-12 text-center text-white/30 text-sm">
           No hay mensualidades registradas aún

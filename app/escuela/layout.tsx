@@ -13,6 +13,7 @@ const navItems = [
   { href: '/escuela/tarifas', label: 'Tarifas', icon: '◈' },
   { href: '/escuela/eventos', label: 'Eventos', icon: '◇' },
   { href: '/escuela/cobros', label: 'Cobros', icon: '◎' },
+  { href: '/escuela/matriculas', label: 'Matrículas', icon: '◇' },
   { href: '/escuela/comunicados', label: 'Comunicados', icon: '◈' },
 ]
 

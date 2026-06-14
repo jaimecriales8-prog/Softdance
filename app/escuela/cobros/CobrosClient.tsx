@@ -35,6 +35,9 @@ export default function CobrosClient({ escuela, mensualidades: inicial, eventos:
   const [detalle, setDetalle] = useState<Mensualidad | null>(null)
   const [generando, setGenerando] = useState(false)
   const [guardandoMeses, setGuardandoMeses] = useState(false)
+  const [descuentoModal, setDescuentoModal] = useState<Mensualidad | null>(null)
+  const [descuentoValor, setDescuentoValor] = useState('')
+  const [guardandoDescuento, setGuardandoDescuento] = useState(false)
 
   // Eventos state
   const [eventos, setEventos] = useState(inicialeventos)
@@ -82,6 +85,18 @@ export default function CobrosClient({ escuela, mensualidades: inicial, eventos:
   async function marcarPagada(m: Mensualidad) {
     await supabase.from('mensualidades').update({ estado: 'pagado' }).eq('id', m.id)
     setMensualidades(mensualidades.map(x => x.id === m.id ? { ...x, estado: 'pagado' } : x))
+  }
+
+  async function aplicarDescuento() {
+    if (!descuentoModal) return
+    setGuardandoDescuento(true)
+    const descuento = parseInt(descuentoValor) || 0
+    const total = Math.max(0, descuentoModal.subtotal - descuento)
+    await supabase.from('mensualidades').update({ descuento, total }).eq('id', descuentoModal.id)
+    setMensualidades(mensualidades.map(m => m.id === descuentoModal.id ? { ...m, descuento, total } : m))
+    setDescuentoModal(null)
+    setDescuentoValor('')
+    setGuardandoDescuento(false)
   }
 
   // ─── Eventos ──────────────────────────────────────────────────
@@ -302,10 +317,16 @@ export default function CobrosClient({ escuela, mensualidades: inicial, eventos:
                             Ver detalle
                           </button>
                           {m.estado === 'pendiente' && (
-                            <button onClick={() => marcarPagada(m)}
-                              className="text-xs bg-green-500/10 text-green-400 hover:bg-green-500/20 px-2 py-1 rounded transition-colors">
-                              Marcar pagada
-                            </button>
+                            <>
+                              <button onClick={() => { setDescuentoModal(m); setDescuentoValor(String(m.descuento || '')) }}
+                                className="text-xs text-white/40 hover:text-yellow-400 transition-colors px-2 py-1 rounded hover:bg-white/5">
+                                Descuento
+                              </button>
+                              <button onClick={() => marcarPagada(m)}
+                                className="text-xs bg-green-500/10 text-green-400 hover:bg-green-500/20 px-2 py-1 rounded transition-colors">
+                                Marcar pagada
+                              </button>
+                            </>
                           )}
                         </div>
                       </td>
@@ -341,6 +362,41 @@ export default function CobrosClient({ escuela, mensualidades: inicial, eventos:
               )}
             </>
           )}
+        </div>
+      )}
+
+      {/* Modal descuento */}
+      {descuentoModal && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+          <div className="bg-[#111] border border-white/10 rounded-2xl p-6 w-full max-w-sm">
+            <h2 className="text-lg font-semibold text-white mb-1">Aplicar descuento</h2>
+            <p className="text-white/40 text-xs mb-4">{descuentoModal.familias.nombre} · {MESES_FULL[parseInt(descuentoModal.periodo.split('-')[1])]} {descuentoModal.periodo.split('-')[0]}</p>
+            <div className="mb-4">
+              <label className="block text-xs text-white/50 mb-1">Valor del descuento ($)</label>
+              <input
+                type="number" min="0" max={descuentoModal.subtotal}
+                value={descuentoValor}
+                onChange={e => setDescuentoValor(e.target.value)}
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#e91e8c]"
+                placeholder="0"
+              />
+              {descuentoValor && parseInt(descuentoValor) > 0 && (
+                <p className="text-xs text-white/40 mt-1">
+                  Total con descuento: ${Math.max(0, descuentoModal.subtotal - parseInt(descuentoValor)).toLocaleString('es-CO')}
+                </p>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => { setDescuentoModal(null); setDescuentoValor('') }}
+                className="flex-1 border border-white/10 text-white/60 text-sm py-2 rounded-lg hover:bg-white/5 transition-colors">
+                Cancelar
+              </button>
+              <button onClick={aplicarDescuento} disabled={guardandoDescuento}
+                className="flex-1 bg-[#e91e8c] hover:bg-[#ff3da8] text-white text-sm py-2 rounded-lg disabled:opacity-50 transition-colors">
+                {guardandoDescuento ? 'Guardando...' : 'Aplicar'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

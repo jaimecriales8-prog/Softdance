@@ -7,6 +7,8 @@ const navItems = [
   { href: '/familia', label: 'Inicio', icon: '▦' },
   { href: '/familia/horarios', label: 'Horarios', icon: '◷' },
   { href: '/familia/mensualidades', label: 'Mensualidades', icon: '◎' },
+  { href: '/familia/comunicados', label: 'Comunicados', icon: '◉' },
+  { href: '/familia/eventos', label: 'Eventos', icon: '◈' },
 ]
 
 export default async function FamiliaLayout({ children }: { children: ReactNode }) {
