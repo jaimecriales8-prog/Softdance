@@ -90,14 +90,32 @@ export async function POST(request: NextRequest) {
   }
 
   const fecha_inicio = new Date().toISOString().split('T')[0]
-  const { data, error } = await supabase
+
+  // Buscar registro existente para esta combinación hoy
+  const { data: existente } = await supabase
     .from('alumna_grupo')
-    .upsert(
-      { escuela_id: escuelaId, alumna_id, grupo_id, fecha_inicio, activo: true, fecha_fin: null },
-      { onConflict: 'alumna_id,grupo_id,fecha_inicio' }
-    )
-    .select('id, fecha_inicio, alumnas(id, nombre, fecha_nacimiento, familias(nombre))')
-    .single()
+    .select('id')
+    .eq('alumna_id', alumna_id)
+    .eq('grupo_id', grupo_id)
+    .eq('fecha_inicio', fecha_inicio)
+    .maybeSingle()
+
+  let data, error
+
+  if (existente) {
+    const res = await supabase.from('alumna_grupo')
+      .update({ activo: true, fecha_fin: null })
+      .eq('id', existente.id)
+      .select('id, fecha_inicio, alumnas(id, nombre, fecha_nacimiento, familias(nombre))')
+      .single()
+    data = res.data; error = res.error
+  } else {
+    const res = await supabase.from('alumna_grupo')
+      .insert({ escuela_id: escuelaId, alumna_id, grupo_id, fecha_inicio, activo: true })
+      .select('id, fecha_inicio, alumnas(id, nombre, fecha_nacimiento, familias(nombre))')
+      .single()
+    data = res.data; error = res.error
+  }
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
   return NextResponse.json({ alumna_grupo: data })

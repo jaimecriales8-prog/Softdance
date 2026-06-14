@@ -24,29 +24,47 @@ export async function POST(request: NextRequest) {
     .eq('alumna_id', alumna_id)
     .eq('activo', true)
 
-  const mismTipo = (gruposActivos ?? []).filter((ag: any) => {
+  const mismoTipo = (gruposActivos ?? []).filter((ag: any) => {
     const g = Array.isArray(ag.grupos) ? ag.grupos[0] : ag.grupos
     return g?.es_elite === nuevoGrupo?.es_elite
   })
 
-  if (mismTipo.length > 0) {
+  if (mismoTipo.length > 0) {
     await supabase.from('alumna_grupo')
       .update({ activo: false, fecha_fin: hoy })
-      .in('id', mismTipo.map((ag: any) => ag.id))
+      .in('id', mismoTipo.map((ag: any) => ag.id))
   }
 
-  // Abrir nuevo grupo
-  const { data: alumnaGrupo, error } = await supabase.from('alumna_grupo').upsert({
-    escuela_id,
-    alumna_id,
-    grupo_id: nuevo_grupo_id,
-    fecha_inicio: hoy,
-    activo: true,
-    fecha_fin: null,
-  }, { onConflict: 'alumna_id,grupo_id,fecha_inicio' })
-  .select(`id, fecha_inicio, fecha_fin, activo, grupos(id, nombre, es_elite)`).single()
+  // Buscar si ya existe un registro para esta alumna+grupo (activo o cerrado hoy)
+  const { data: existente } = await supabase
+    .from('alumna_grupo')
+    .select('id, fecha_inicio, fecha_fin, activo, grupos(id, nombre, es_elite)')
+    .eq('alumna_id', alumna_id)
+    .eq('grupo_id', nuevo_grupo_id)
+    .eq('fecha_inicio', hoy)
+    .maybeSingle()
+
+  let alumnaGrupo, error
+
+  if (existente) {
+    // Reactivar el registro existente
+    const res = await supabase.from('alumna_grupo')
+      .update({ activo: true, fecha_fin: null })
+      .eq('id', existente.id)
+      .select('id, fecha_inicio, fecha_fin, activo, grupos(id, nombre, es_elite)')
+      .single()
+    alumnaGrupo = res.data
+    error = res.error
+  } else {
+    // Crear nuevo registro
+    const res = await supabase.from('alumna_grupo')
+      .insert({ escuela_id, alumna_id, grupo_id: nuevo_grupo_id, fecha_inicio: hoy, activo: true })
+      .select('id, fecha_inicio, fecha_fin, activo, grupos(id, nombre, es_elite)')
+      .single()
+    alumnaGrupo = res.data
+    error = res.error
+  }
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
-
   return NextResponse.json({ alumna_grupo: alumnaGrupo })
 }
