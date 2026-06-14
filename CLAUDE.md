@@ -143,6 +143,7 @@ Flujo recuperación de contraseña: `/forgot-password` → email con enlace → 
 - **Familias** — CRUD familias; detalle con alumnas
   - Alumna: nombre, documento, fecha_nacimiento, notas
   - Asignar grupo normal o élite (independientes, no excluyentes)
+  - Quitar grupo élite activo (cierra registro con fecha_fin=hoy)
   - Actividades extra (chips toggle)
   - Eventos: inscribir con conceptos individuales y valores ajustables; desinscribir
   - Historial de grupos: cronología de todos los grupos que tuvo la alumna
@@ -177,9 +178,13 @@ Flujo recuperación de contraseña: `/forgot-password` → email con enlace → 
 
 ## Pagos Wompi
 - Checkout URL: `https://checkout.wompi.co/p/?...` con hash SHA256 de integridad
-- Reference format: `MENS-{mensualidad_id}`
-- Webhook en `/api/webhooks/wompi` verifica firma y marca mensualidad como 'pagado'
-- `cobro_activo=true` en escuela + `wompi_pub_key` configurada → botón Pagar visible en portal padres
+- Referencias:
+  - `MENS-{mensualidad_id}` → mensualidad
+  - `MAT-{matricula_id}` → matrícula
+  - `EVT-{evento_alumna_id}-{cuota_numero}` → cuota de evento
+- Webhook en `/api/webhooks/wompi` verifica firma y actualiza el registro correspondiente
+- Para EVT: marca la cuota como pagada; si todas las cuotas pagadas → estado='pagado'
+- `cobro_activo=true` en escuela + `wompi_pub_key` configurada → botones Pagar visibles en portal padres (mensualidades, matrículas y eventos)
 
 ## Cron jobs
 - `/api/cron/generar-mensualidades` — día 1 de cada mes a las 6am
