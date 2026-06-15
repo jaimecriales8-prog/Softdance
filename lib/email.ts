@@ -29,20 +29,11 @@ export async function enviarBienvenida({
 
   await sendEmail({
     to: email,
-    subject: 'Bienvenido/a a Softdance — tus datos de acceso',
+    subject: 'Bienvenido/a a Softdance — tu cuenta está lista',
     html: emailHtml(`Bienvenido/a, ${nombre}`, `
-      <p>Tu cuenta en <strong>Softdance</strong> ha sido creada. Aquí están tus datos de acceso:</p>
-      <table style="margin:24px 0;width:100%;border-collapse:collapse">
-        <tr>
-          <td style="padding:10px 14px;background:#1a1a1a;color:#999;font-size:12px;text-transform:uppercase;letter-spacing:0.05em;border-radius:8px 8px 0 0">Correo</td>
-          <td style="padding:10px 14px;background:#111;color:#fff;font-size:14px;border-radius:8px 8px 0 0">${email}</td>
-        </tr>
-        <tr>
-          <td style="padding:10px 14px;background:#1a1a1a;color:#999;font-size:12px;text-transform:uppercase;letter-spacing:0.05em;border-radius:0 0 8px 8px">Contraseña</td>
-          <td style="padding:10px 14px;background:#111;color:#fff;font-size:14px;font-family:monospace;border-radius:0 0 8px 8px">${password}</td>
-        </tr>
-      </table>
-      <p style="color:#999">Te recomendamos cambiar tu contraseña después de ingresar por primera vez.</p>
+      <p>Tu cuenta en <strong>Softdance</strong> ha sido creada. Tu correo de acceso es:</p>
+      <div style="background:#1a1a1a;border-radius:8px;padding:12px 16px;margin:20px 0;font-size:14px;color:#fff">${email}</div>
+      <p style="color:#999;font-size:13px">La contraseña de acceso la recibirás directamente del administrador de tu escuela.</p>
       <a href="${portalUrl}" style="display:inline-block;margin-top:8px;background:#e91e8c;color:#fff;text-decoration:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:600">
         Acceder a ${rolLabel}
       </a>

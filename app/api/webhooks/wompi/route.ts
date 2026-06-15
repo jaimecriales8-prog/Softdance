@@ -79,10 +79,10 @@ export async function POST(request: NextRequest) {
 
   // --- EVT-{evento_alumna_id}-{cuota_numero} ---
   if (reference?.startsWith('EVT-')) {
-    const parts = reference.replace('EVT-', '').split('-')
-    // evento_alumna id es UUID (contiene guiones), cuota_numero es el último segmento
-    const cuotaNumero = parseInt(parts[parts.length - 1])
-    const eventoAlumnaId = parts.slice(0, parts.length - 1).join('-')
+    const match = reference.match(/^EVT-([a-f0-9-]{36})-(\d+)$/)
+    if (!match) return NextResponse.json({ ok: true })
+    const eventoAlumnaId = match[1]
+    const cuotaNumero = parseInt(match[2])
 
     const { data: ea } = await service
       .from('evento_alumna')
