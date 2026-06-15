@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
       .select('wompi_integrity_secret')
       .eq('escuela_id', escuelaId)
       .single()
-    if (!config?.wompi_integrity_secret) return true // sin config, dejar pasar
+    if (!config?.wompi_integrity_secret) return false
     const values = properties.map((p: string) => {
       if (p === 'transaction.id') return data.id
       if (p === 'transaction.status') return status

@@ -12,6 +12,7 @@ export async function POST(request: NextRequest) {
   if (!perfil?.familia_id) return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
 
   const body = await request.json()
+  // service client solo para leer config_pagos — tabla no accesible por RLS al rol padre
   const service = createServiceClient()
 
   const { data: config } = await service
