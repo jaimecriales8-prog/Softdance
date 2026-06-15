@@ -57,7 +57,7 @@ export default async function FamiliaHorariosPage() {
         </div>
         {hayHorarios && (
           <div className="flex gap-2">
-            <a href="webcal://softdance.vercel.app/api/familia/horarios/ics"
+            <a href="webcal://softdance.grialtech.co/api/familia/horarios/ics"
               className="flex items-center gap-2 bg-[#e91e8c]/10 text-[#e91e8c] hover:bg-[#e91e8c]/20 text-xs px-3 py-2 rounded-lg transition-colors">
               <span>📅</span> Suscribirse al calendario
             </a>

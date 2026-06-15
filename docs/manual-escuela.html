@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Manual de usuario — Softdance</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    font-size: 13px;
+    line-height: 1.65;
+    color: #1a1a1a;
+    background: #fff;
+  }
+
+  .page {
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 48px 48px 64px;
+  }
+
+  /* ── Portada ── */
+  .cover {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    background: #0a0a0a;
+    color: #fff;
+    padding: 64px 64px;
+    page-break-after: always;
+  }
+  .cover-logo {
+    font-size: 36px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    margin-bottom: 48px;
+  }
+  .cover-logo span { color: #e91e8c; }
+  .cover h1 {
+    font-size: 42px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    margin-bottom: 16px;
+    color: #fff;
+  }
+  .cover p {
+    font-size: 16px;
+    color: rgba(255,255,255,0.45);
+    margin-bottom: 8px;
+  }
+  .cover-divider {
+    width: 48px;
+    height: 3px;
+    background: #e91e8c;
+    margin: 32px 0;
+  }
+  .cover-meta {
+    margin-top: auto;
+    padding-top: 64px;
+    font-size: 12px;
+    color: rgba(255,255,255,0.3);
+  }
+
+  /* ── Índice ── */
+  .toc {
+    padding: 48px 64px;
+    page-break-after: always;
+  }
+  .toc h2 {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #e91e8c;
+    margin-bottom: 24px;
+  }
+  .toc-item {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 7px 0;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  .toc-num {
+    font-size: 11px;
+    color: #e91e8c;
+    font-weight: 700;
+    min-width: 22px;
+  }
+  .toc-title {
+    font-size: 13px;
+    color: #1a1a1a;
+    font-weight: 500;
+    flex: 1;
+  }
+  .toc-dots {
+    flex: 1;
+    border-bottom: 1px dotted #ccc;
+    margin: 0 8px;
+    position: relative;
+    top: -3px;
+  }
+
+  /* ── Secciones ── */
+  .section {
+    padding: 48px 64px;
+    page-break-inside: avoid;
+  }
+  .section + .section {
+    border-top: 1px solid #f0f0f0;
+  }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 28px;
+  }
+  .section-num {
+    width: 32px;
+    height: 32px;
+    background: #e91e8c;
+    color: #fff;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .section-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: #0a0a0a;
+    letter-spacing: -0.02em;
+  }
+
+  h3 {
+    font-size: 14px;
+    font-weight: 700;
+    color: #0a0a0a;
+    margin: 24px 0 10px;
+    padding-left: 12px;
+    border-left: 3px solid #e91e8c;
+  }
+
+  p {
+    color: #333;
+    margin-bottom: 10px;
+  }
+
+  ol, ul {
+    padding-left: 20px;
+    margin-bottom: 12px;
+  }
+  li {
+    color: #333;
+    margin-bottom: 5px;
+  }
+  li strong { color: #0a0a0a; }
+
+  /* ── Tabla ── */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 12.5px;
+  }
+  th {
+    background: #0a0a0a;
+    color: #fff;
+    font-weight: 600;
+    padding: 10px 14px;
+    text-align: left;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  th:first-child { border-radius: 6px 0 0 0; }
+  th:last-child { border-radius: 0 6px 0 0; }
+  td {
+    padding: 9px 14px;
+    border-bottom: 1px solid #f0f0f0;
+    vertical-align: top;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:nth-child(even) td { background: #fafafa; }
+  td:first-child { font-weight: 600; color: #0a0a0a; white-space: nowrap; }
+
+  /* ── Callouts ── */
+  .callout {
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin: 16px 0;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .callout-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+  .callout p { margin: 0; font-size: 12.5px; }
+
+  .callout.tip { background: #fff8e7; border-left: 4px solid #f59e0b; }
+  .callout.tip .callout-icon::before { content: '💡'; }
+  .callout.info { background: #eff6ff; border-left: 4px solid #3b82f6; }
+  .callout.info .callout-icon::before { content: 'ℹ️'; }
+  .callout.warning { background: #fff1f0; border-left: 4px solid #e91e8c; }
+  .callout.warning .callout-icon::before { content: '⚠️'; }
+
+  /* ── Steps ── */
+  .steps { margin: 12px 0; }
+  .step {
+    display: flex;
+    gap: 14px;
+    margin-bottom: 10px;
+    align-items: flex-start;
+  }
+  .step-num {
+    min-width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #e91e8c;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .step p { margin: 0; }
+
+  /* ── Badge ── */
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .badge-pink { background: #fce7f3; color: #be185d; }
+  .badge-green { background: #dcfce7; color: #166534; }
+  .badge-blue { background: #dbeafe; color: #1e40af; }
+  .badge-gray { background: #f3f4f6; color: #374151; }
+
+  /* ── FAQ ── */
+  .faq-item {
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    margin-bottom: 10px;
+    overflow: hidden;
+  }
+  .faq-q {
+    background: #fafafa;
+    padding: 12px 16px;
+    font-weight: 600;
+    font-size: 13px;
+    color: #0a0a0a;
+  }
+  .faq-a {
+    padding: 12px 16px;
+    font-size: 12.5px;
+    color: #444;
+    border-top: 1px solid #f0f0f0;
+  }
+  .faq-a p { margin: 0; }
+
+  /* ── Footer ── */
+  .footer {
+    background: #0a0a0a;
+    color: rgba(255,255,255,0.4);
+    padding: 32px 64px;
+    font-size: 11.5px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 48px;
+  }
+  .footer strong { color: #fff; }
+  .footer a { color: #e91e8c; text-decoration: none; }
+
+  /* ── Print ── */
+  @media print {
+    body { font-size: 12px; }
+    .cover { min-height: 100vh; }
+    .section { page-break-inside: avoid; }
+    .no-break { page-break-inside: avoid; }
+    @page { margin: 0; }
+  }
+
+  @media screen {
+    body { background: #e5e7eb; }
+    .cover, .toc, .section, .footer {
+      max-width: 780px;
+      margin: 0 auto;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .cover { margin-bottom: 2px; }
+    .toc { background: #fff; margin-bottom: 2px; }
+    .section { background: #fff; margin-bottom: 2px; }
+    .footer { max-width: 780px; margin: 2px auto 48px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════ PORTADA ══════════════ -->
+<div class="cover">
+  <div class="cover-logo">Soft<span>dance</span></div>
+  <h1>Manual de usuario<br>para escuelas</h1>
+  <p>Guía completa del panel de administración</p>
+  <div class="cover-divider"></div>
+  <p>softdance.grialtech.co</p>
+  <div class="cover-meta">
+    Versión 1.0 · Junio 2026
+  </div>
+</div>
+
+<!-- ══════════════ ÍNDICE ══════════════ -->
+<div class="toc">
+  <h2>Contenido</h2>
+  <div class="toc-item"><span class="toc-num">01</span><span class="toc-title">Acceso al sistema</span></div>
+  <div class="toc-item"><span class="toc-num">02</span><span class="toc-title">Panel principal y navegación</span></div>
+  <div class="toc-item"><span class="toc-num">03</span><span class="toc-title">Grupos</span></div>
+  <div class="toc-item"><span class="toc-num">04</span><span class="toc-title">Familias y alumnas</span></div>
+  <div class="toc-item"><span class="toc-num">05</span><span class="toc-title">Horarios</span></div>
+  <div class="toc-item"><span class="toc-num">06</span><span class="toc-title">Actividades extra</span></div>
+  <div class="toc-item"><span class="toc-num">07</span><span class="toc-title">Profesores</span></div>
+  <div class="toc-item"><span class="toc-num">08</span><span class="toc-title">Tarifas</span></div>
+  <div class="toc-item"><span class="toc-num">09</span><span class="toc-title">Eventos</span></div>
+  <div class="toc-item"><span class="toc-num">10</span><span class="toc-title">Cobros y mensualidades</span></div>
+  <div class="toc-item"><span class="toc-num">11</span><span class="toc-title">Matrículas</span></div>
+  <div class="toc-item"><span class="toc-num">12</span><span class="toc-title">Comunicados</span></div>
+  <div class="toc-item"><span class="toc-num">13</span><span class="toc-title">Pagos en línea (Wompi)</span></div>
+  <div class="toc-item"><span class="toc-num">14</span><span class="toc-title">Portal de padres</span></div>
+  <div class="toc-item"><span class="toc-num">15</span><span class="toc-title">Preguntas frecuentes</span></div>
+</div>
+
+<!-- ══════════════ 01 ACCESO ══════════════ -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-num">01</div>
+    <div class="section-title">Acceso al sistema</div>
+  </div>
+
+  <p>Ingresa en <strong>softdance.grialtech.co/login</strong> con el correo y contraseña que recibiste al momento de crear tu cuenta.</p>
+
+  <h3>Recuperar contraseña</h3>
+  <div class="steps">
+    <div class="step"><div class="step-num">1</div><p>En la pantalla de login, haz clic en <strong>Olvidé mi contraseña</strong>.</p></div>
+    <div class="step"><div class="step-num">2</div><p>Ingresa tu correo y haz clic en <strong>Enviar enlace</strong>.</p></div>
+    <div class="step"><div class="step-num">3</div><p>Revisa tu bandeja de entrada. Recibirás un correo con un botón para crear una nueva contraseña. El enlace expira en 1 hora.</p></div>
+  </div>
+
+  <div class="callout info">
+    <div class="callout-icon"></div>
+    <p>Al ingresar, el sistema te redirige automáticamente al panel de tu escuela. No necesitas seleccionar ninguna opción adicional.</p>
+  </div>
+</div>
+
+<!-- ══════════════ 02 PANEL PRINCIPAL ══════════════ -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-num">02</div>
+    <div class="section-title">Panel principal y navegación</div>
+  </div>
+
+  <p>La <strong>barra lateral izquierda</strong> contiene el acceso a todos los módulos de la plataforma. En la parte inferior verás tu nombre y el botón para cerrar sesión.</p>
+
+  <h3>Dashboard</h3>
+  <p>La pantalla de inicio muestra un resumen con:</p>
+  <ul>
+    <li>Número total de grupos, familias y alumnas activas</li>
+    <li>Campo de <strong>instrucciones de pago</strong> — si no tienes Wompi configurado, escribe aquí tus datos de transferencia o Nequi para que las familias los vean en su portal</li>
+  </ul>
+</div>
+
+<!-- ══════════════ 03 GRUPOS ══════════════ -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-num">03</div>
+    <div class="section-title">Grupos</div>
+  </div>
+
+  <p>Los grupos son la unidad base del cobro mensual. Softdance maneja dos tipos de grupos que pueden coexistir para la misma alumna:</p>
+
+  <table>
+    <tr>
+      <th>Tipo</th>
+      <th>Descripción</th>
+      <th>Exclusividad</th>
+    </tr>
+    <tr>
+      <td>Grupo normal</td>
+      <td>Agrupación por edad o nivel (ej. Iniciación, Intermedio, Avanzado)</td>
+      <td><span class="badge badge-blue">Solo uno a la vez</span></td>
+    </tr>
+    <tr>
+      <td>Grupo élite ⭐</td>
+      <td>Para alumnas de competencia o con clases adicionales</td>
+      <td><span class="badge badge-green">Compatible con normal</span></td>
+    </tr>
+  </table>
+
+  <div class="callout tip">
+    <div class="callout-icon"></div>
+    <p>Una alumna puede tener un grupo normal <em>y</em> un grupo élite al mismo tiempo. El cobro mensual suma ambos precios.</p>
+  </div>
+
+  <h3>Crear un grupo</h3>
+  <div class="steps">
+    <div class="step"><div class="step-num">1</div><p>Ve a <strong>Grupos</strong> en el menú lateral.</p></div>
+    <div class="step"><div class="step-num">2</div><p>Haz clic en <strong>+ Nuevo grupo</strong>.</p></div>
+    <div class="step"><div class="step-num">3</div><p>Ingresa el nombre, el precio mensual y marca si es un grupo élite.</p></div>
+  </div>
+
+  <h3>Gestionar alumnas de un grupo</h3>
+  <p>Haz clic en el nombre del grupo para abrir el panel lateral. Desde ahí puedes ver las alumnas asignadas y buscar nuevas para agregar.</p>
+</div>
+
+<!-- ══════════════ 04 FAMILIAS ══════════════ -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-num">04</div>
+    <div class="section-title">Familias y alumnas</div>
+  </div>
+
+  <p>Cada alumna pertenece a una familia. La familia es la unidad de cobro: una sola mensualidad agrupa todas las alumnas de esa familia.</p>
+
+  <h3>Crear una familia</h3>
+  <div class="steps">
+    <div class="step"><div class="step-num">1</div><p>Ve a <strong>Familias → + Nueva familia</strong>.</p></div>
+    <div class="step"><div class="step-num">2</div><p>Ingresa nombre completo de la familia, correo electrónico y teléfono.</p></div>
+    <div class="step"><div class="step-num">3</div><p>Para que los padres puedan acceder al portal, haz clic en <strong>Crear usuario</strong> dentro del detalle de la familia. Ingresa el correo — recibirán automáticamente sus credenciales por email.</p></div>
+  </div>
+
+  <h3>Agregar una alumna</h3>
+  <p>Dentro del detalle de la familia, haz clic en <strong>+ Agregar alumna</strong> e ingresa:</p>
+  <ul>
+    <li>Nombre completo</li>
+    <li>Número de documento (CC o TI)</li>
+    <li>Fecha de nacimiento</li>
+    <li>Grupo inicial (opcional)</li>
+    <li>Notas internas (no visibles para los padres)</li>
+  </ul>
+
+  <h3>Acciones disponibles por alumna</h3>
+  <p>En la tarjeta de cada alumna encontrarás estas opciones:</p>
+
+  <table>
+    <tr>
+      <th>Acción</th>
+      <th>Qué hace</th>
+    </tr>
+    <tr>
+      <td>Cambiar grupo</td>
+      <td>Mueve la alumna a otro grupo normal. El grupo anterior queda registrado en el historial con su fecha de salida.</td>
+    </tr>
+    <tr>
+      <td>⭐ Élite</td>
+      <td>Asigna un grupo élite adicional. No reemplaza el grupo normal.</td>
+    </tr>
+    <tr>
+      <td>Quitar élite</td>
+      <td>Desvincula a la alumna del grupo élite activo. Queda en el historial. Solo aparece si tiene élite activo.</td>
+    </tr>
+    <tr>
+      <td>Actividades</td>
+      <td>Abre el panel de actividades extra. Haz clic en cada chip para asignarla o quitarla.</td>
+    </tr>
+    <tr>
+      <td>Eventos</td>
+      <td>Inscribe o desvincula a la alumna de eventos especiales con valores individualizados.</td>
+    </tr>
+    <tr>
+      <td>Historial</td>
+      <td>Muestra todos los grupos por los que pasó la alumna con fechas de entrada y salida.</td>
+    </tr>
+    <tr>
+      <td>Congelar</td>
+      <td>La alumna queda suspendida temporalmente. Sigue en el sistema pero no se genera mensualidad para ella.</td>
+    </tr>
+    <tr>
+      <td>Editar</td>
+      <td>Modifica nombre, documento, fecha de nacimiento y notas.</td>
+    </tr>
+  </table>
+
+  <h3>Recibo de la familia</h3>
+  <p>En la esquina superior derecha del detalle de la familia encontrarás el botón <strong>Ver recibo</strong>. Muestra un estado de cuenta completo con mensualidades y eventos, listo para imprimir o guardar como PDF.</p>
+</div>
+
+<!-- ══════════════ 05 HORARIOS ══════════════ -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-num">05</div>
+    <div class="section-title">Horarios</div>
+  </div>
+
+  <p>Registra las clases de cada grupo o actividad extra. Las familias y profesores pueden ver sus horarios en sus portales y exportarlos al calendario del celular.</p>
+
+  <h3>Crear un horario</h3>
+  <div class="steps">
+    <div class="step"><div class="step-num">1</div><p>Ve a <strong>Horarios → + Nuevo horario</strong>.</p></div>
+    <div class="step"><div class="step-num">2</div><p>Selecciona si es para un <strong>grupo</strong> o una <strong>actividad extra</strong>.</p></div>
+    <div class="step"><div class="step-num">3</div><p>Elige el día de la semana, hora de inicio, hora de fin, salón y profesora asignada.</p></div>
+  </div>
+
+  <p>Los horarios se muestran agrupados por día de la semana.</p>
+</div>
+
+<!-- ══════════════ 06 ACTIVIDADES EXTRA ══════════════ -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-num">06</div>
+    <div class="section-title">Actividades extra</div>
+  </div>
+
+  <p>Las actividades extra son cobros adicionales al grupo mensual. Se asignan individualmente a cada alumna según lo que corresponda.</p>
+
+  <table>
+    <tr>
+      <th>Tipo</th>
+      <th>Comportamiento</th>
+      <th>Ejemplo</th>
+    </tr>
+    <tr>
+      <td><span class="badge badge-pink">Recurrente</span></td>
+      <td>Se suma automáticamente al cobro mensual de la alumna</td>
+      <td>Taller de técnica, clases particulares</td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-gray">Pago único</span></td>
+      <td>No afecta la mensualidad; se cobra por separado</td>
+      <td>Material, uniforme, fotos</td>
+    </tr>
+  </table>
+
+  <h3>Asignar una actividad a una alumna</h3>
+  <p>Ve al detalle de la familia, abre el panel <strong>Actividades</strong> de la alumna y haz clic en el chip de la actividad que quieres agregar o quitar. Los cambios son inmediatos.</p>
+</div>
+
+<!-- ══════════════ 07 PROFESORES ══════════════ -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-num">07</div>
+    <div class="section-title">Profesores</div>
+  </div>
+
+  <h3>Crear un profesor</h3>
+  <div class="steps">
+    <div class="step"><div class="step-num">1</div><p>Ve a <strong>Profesores → + Nuevo profesor</strong>.</p></div>
+    <div class="step"><div class="step-num">2</div><p>Ingresa nombre y datos de contacto.</p></div>
+    <div class="step"><div class="step-num">3</div><p>Desde el detalle del profesor, asígnalo a los grupos y actividades extra en los que da clase.</p></div>
+  </div>
+
+  <h3>Crear acceso al portal</h3>
+  <p>Haz clic en <strong>Crear usuario</strong> dentro del detalle del profesor e ingresa su correo. Recibirá un correo con sus credenciales para acceder al portal <strong>/profesor</strong>, donde verá únicamente su horario semanal.</p>
+</div>
+
+<!-- ══════════════ 08 TARIFAS ══════════════ -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-num">08</div>
+    <div class="section-title">Tarifas</div>
+  </div>
+
+  <p>Desde <strong>Tarifas</strong> puedes editar los precios directamente en la tabla, sin necesidad de formularios adicionales:</p>
+  <ul>
+    <li><strong>Matrícula anual</strong> — valor por defecto al generar matrículas</li>
+    <li><strong>Precio mensual de cada grupo</strong></li>
+    <li><strong>Precio de cada actividad extra</strong></li>
+  </ul>
+
+  <div class="callout warning">
+    <div class="callout-icon"></div>
+    <p>Los cambios de precio aplican únicamente a las mensualidades generadas <em>después</em> del cambio. Las mensualidades ya creadas conservan sus valores originales.</p>
+  </div>
+</div>
+
+<!-- ══════════════ 09 EVENTOS ══════════════ -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-num">09</div>
+    <div class="section-title">Eventos</div>
+  </div>
+
+  <p>Los eventos son cobros especiales para competencias, presentaciones, viajes u otras actividades fuera del calendario regular.</p>
+
+  <h3>Estructura de un evento</h3>
+  <ul>
+    <li><strong>Conceptos</strong> — ítems de cobro con valor por defecto (ej. inscripción, vestuario, transporte). Cada alumna puede tener valores distintos.</li>
+    <li><strong>Cuotas</strong> — el total se puede dividir en varias cuotas que las familias pagan de forma escalonada.</li>
+  </ul>
+
+  <h3>Crear un evento</h3>
+  <div class="steps">
+    <div class="step"><div class="step-num">1</div><p>Ve a <strong>Eventos → + Nuevo evento</strong>.</p></div>
+    <div class="step"><div class="step-num">2</div><p>Ingresa nombre, fecha y número de cuotas.</p></div>
+    <div class="step"><div class="step-num">3</div><p>Agrega los conceptos con sus valores por defecto. Puedes modificarlos individualmente por alumna al inscribirla.</p></div>
+  </div>
+
+  <h3>Inscribir una alumna con valores individualizados</h3>
+  <p>Este método es el recomendado cuando cada alumna tiene conceptos o montos distintos:</p>
+  <div class="steps">
+    <div class="step"><div class="step-num">1</div><p>Ve a <strong>Familias → [nombre de la familia]</strong>.</p></div>
+    <div class="step"><div class="step-num">2</div><p>En la tarjeta de la alumna, haz clic en <strong>Eventos</strong>.</p></div>
+    <div class="step"><div class="step-num">3</div><p>Verás los eventos disponibles. Haz clic en <strong>+ Agregar</strong> junto al evento.</p></div>
+    <div class="step"><div class="step-num">4</div><p>En el modal, marca los conceptos que aplican a esta alumna y ajusta los valores si es necesario. El total y las cuotas se calculan automáticamente.</p></div>
+    <div class="step"><div class="step-num">5</div><p>Haz clic en <strong>Inscribir</strong>.</p></div>
+  </div>
+
+  <p>Para <strong>desinscribir</strong> a una alumna, haz clic en <strong>✓ Inscrita · Quitar</strong>.</p>
+
+  <h3>Gestionar cuotas de eventos</h3>
+  <p>En <strong>Cobros → Eventos</strong> puedes ver el estado de cuotas por alumna y marcarlas como pagadas una a una.</p>
+</div>
+
+<!-- ══════════════ 10 COBROS ══════════════ -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-num">10</div>
+    <div class="section-title">Cobros y mensualidades</div>
+  </div>
+
+  <h3>Generación automática</h3>
+  <p>Las mensualidades se generan <strong>automáticamente el día 1 de cada mes</strong> para las escuelas con ese mes habilitado. Al generarse, cada familia recibe un correo con el detalle del cobro. Tres días antes del vencimiento, el sistema envía un recordatorio automático.</p>
+
+  <h3>Configurar meses activos</h3>
+  <p>En <strong>Cobros → Mensualidades</strong> encontrarás los meses del año. Marca los meses en que tu escuela cobra. Por ejemplo, si no cobras en diciembre ni en enero, desmarca esos meses.</p>
+
+  <h3>Generar mensualidades manualmente</h3>
+  <p>Si necesitas generar el cobro antes del día 1, o para un período anterior, usa el botón <strong>Generar mensualidades</strong> y selecciona el período. El sistema no duplica si ya existe.</p>
+
+  <h3>Acciones por mensualidad</h3>
+  <table>
+    <tr>
+      <th>Acción</th>
+      <th>Cómo hacerlo</th>
+    </tr>
+    <tr>
+      <td>Marcar como pagada</td>
+      <td>Haz clic en el estado de la mensualidad para cambiar entre Pendiente y Pagado</td>
+    </tr>
+    <tr>
+      <td>Aplicar descuento</td>
+      <td>Haz clic en <strong>Descuento</strong>, ingresa el valor. El total se recalcula automáticamente</td>
+    </tr>
+    <tr>
+      <td>Ver detalle</td>
+      <td>Expande la mensualidad para ver el desglose por alumna con los conceptos incluidos</td>
+    </tr>
+  </table>
+
+  <div class="callout tip">
+    <div class="callout-icon"></div>
+    <p>Las alumnas congeladas no se incluyen en la mensualidad. Si congelas una alumna a mitad de mes, la mensualidad ya generada no cambia; el efecto aplica desde el siguiente período.</p>
+  </div>
+</div>
+
+<!-- ══════════════ 11 MATRÍCULAS ══════════════ -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-num">11</div>
+    <div class="section-title">Matrículas</div>
+  </div>
+
+  <p>Las matrículas son cobros anuales por familia. Se gestionan desde el módulo <strong>Matrículas</strong>.</p>
+
+  <h3>Generar matrículas</h3>
+  <ul>
+    <li><strong>Para todas las familias:</strong> haz clic en <strong>Generar para todas</strong>. El sistema crea una matrícula por cada familia que no tenga una para el año actual.</li>
+    <li><strong>Individual:</strong> haz clic en <strong>+ Nueva matrícula</strong> y selecciona la familia.</li>
+  </ul>
+
+  <p>El valor por defecto proviene de <strong>Tarifas → Matrícula anual</strong>, pero puedes modificarlo al crear cada matrícula.</p>
+
+  <h3>Marcar como pagada</h3>
+  <p>Haz clic en el estado de la matrícula para alternar entre Pendiente y Pagado.</p>
+</div>
+
+<!-- ══════════════ 12 COMUNICADOS ══════════════ -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-num">12</div>
+    <div class="section-title">Comunicados</div>
+  </div>
+
+  <p>Los comunicados son avisos que aparecen en el portal de los padres. Útiles para anuncios generales, recordatorios de eventos o información específica para un grupo.</p>
+
+  <h3>Crear un comunicado</h3>
+  <div class="steps">
+    <div class="step"><div class="step-num">1</div><p>Ve a <strong>Comunicados → + Nuevo comunicado</strong>.</p></div>
+    <div class="step"><div class="step-num">2</div><p>Escribe el título y el mensaje.</p></div>
+    <div class="step"><div class="step-num">3</div><p>Elige los destinatarios:</p></div>
+  </div>
+
+  <table>
+    <tr>
+      <th>Destinatario</th>
+      <th>Cómo configurarlo</th>
+    </tr>
+    <tr>
+      <td>Todas las familias</td>
+      <td>Deja el campo <em>Grupo</em> vacío</td>
+    </tr>
+    <tr>
+      <td>Un grupo específico</td>
+      <td>Selecciona el grupo. Solo lo verán las familias con alumnas activas en ese grupo</td>
+    </tr>
+  </table>
+
+  <div class="callout info">
+    <div class="callout-icon"></div>
+    <p>Los comunicados se pueden eliminar pero no editar. Para corregir uno, elimínalo y créalo de nuevo.</p>
+  </div>
+</div>
+
+<!-- ══════════════ 13 WOMPI ══════════════ -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-num">13</div>
+    <div class="section-title">Pagos en línea (Wompi)</div>
+  </div>
+
+  <p>Si el administrador de Softdance te configura Wompi, las familias podrán pagar directamente desde su portal con tarjeta débito, crédito o PSE.</p>
+
+  <h3>Qué se puede pagar en línea</h3>
+  <table>
+    <tr>
+      <th>Tipo de cobro</th>
+      <th>Comportamiento</th>
+    </tr>
+    <tr>
+      <td>Mensualidades</td>
+      <td>La familia paga el total de la mensualidad pendiente</td>
+    </tr>
+    <tr>
+      <td>Matrículas</td>
+      <td>La familia paga el valor total de la matrícula</td>
+    </tr>
+    <tr>
+      <td>Eventos (cuotas)</td>
+      <td>La familia paga una cuota a la vez, en orden. El botón muestra la siguiente cuota pendiente</td>
+    </tr>
+  </table>
+
+  <p>Los pagos se procesan automáticamente: al confirmar el pago en Wompi, el sistema marca el cobro como pagado sin que tengas que hacer nada.</p>
+
+  <h3>Sin Wompi: instrucciones manuales</h3>
+  <p>Si no tienes Wompi, puedes publicar tus datos de pago para que las familias los vean:</p>
+  <div class="steps">
+    <div class="step"><div class="step-num">1</div><p>Ve al <strong>Dashboard</strong>.</p></div>
+    <div class="step"><div class="step-num">2</div><p>En el campo <strong>Instrucciones de pago</strong>, escribe tus datos (Nequi, número de cuenta, etc.).</p></div>
+    <div class="step"><div class="step-num">3</div><p>Haz clic en <strong>Guardar</strong>. Las familias verán este texto junto a cada cobro pendiente.</p></div>
+  </div>
+</div>
+
+<!-- ══════════════ 14 PORTAL PADRES ══════════════ -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-num">14</div>
+    <div class="section-title">Portal de padres</div>
+  </div>
+
+  <p>Las familias acceden en <strong>softdance.grialtech.co/familia</strong> con las credenciales que les generaste. Desde su portal pueden:</p>
+
+  <table>
+    <tr>
+      <th>Sección</th>
+      <th>Contenido</th>
+    </tr>
+    <tr>
+      <td>Inicio</td>
+      <td>Mensualidad del mes con botón de pago, matrícula pendiente, eventos con cuotas pendientes, resumen de sus alumnas</td>
+    </tr>
+    <tr>
+      <td>Horarios</td>
+      <td>Clases de todas sus alumnas agrupadas por día; botón para exportar al calendario (Google, iPhone, etc.)</td>
+    </tr>
+    <tr>
+      <td>Mensualidades</td>
+      <td>Historial completo de mensualidades y matrículas con desglose por alumna y botones de pago</td>
+    </tr>
+    <tr>
+      <td>Eventos</td>
+      <td>Participación de sus alumnas, conceptos incluidos y estado de cuotas con botones de pago</td>
+    </tr>
+    <tr>
+      <td>Comunicados</td>
+      <td>Avisos generales y los específicos para los grupos de sus alumnas</td>
+    </tr>
+    <tr>
+      <td>Mi estado de cuenta</td>
+      <td>Resumen completo de todos los cobros, pendientes y pagados. Se puede imprimir o guardar como PDF</td>
+    </tr>
+  </table>
+
+  <div class="callout tip">
+    <div class="callout-icon"></div>
+    <p>Si una familia pierde su contraseña, puede recuperarla desde la pantalla de login sin que tengas que intervenir.</p>
+  </div>
+</div>
+
+<!-- ══════════════ 15 FAQ ══════════════ -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-num">15</div>
+    <div class="section-title">Preguntas frecuentes</div>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-q">¿Qué pasa si una alumna se congela a mitad de mes?</div>
+    <div class="faq-a"><p>La mensualidad de ese mes ya generada no se modifica. A partir del siguiente período, la alumna congelada se excluye del cálculo automático.</p></div>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-q">¿Cambiar el precio de un grupo afecta las mensualidades ya generadas?</div>
+    <div class="faq-a"><p>No. Los cambios de precio solo aplican a las mensualidades generadas después del cambio. Las ya existentes conservan sus valores originales.</p></div>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-q">¿Una alumna puede estar en dos grupos normales?</div>
+    <div class="faq-a"><p>No. Solo puede estar en un grupo normal a la vez. Sin embargo, sí puede tener un grupo normal y un grupo élite simultáneamente, y el cobro mensual suma ambos precios.</p></div>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-q">¿Cómo sé si una familia ya pagó?</div>
+    <div class="faq-a"><p>En <strong>Cobros → Mensualidades</strong> verás el estado de cada familia. Las pagadas muestran ✓ Pagado en verde. También puedes ver el estado completo desde el recibo de la familia.</p></div>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-q">¿Los comunicados llegan por correo a las familias?</div>
+    <div class="faq-a"><p>Por ahora los comunicados solo aparecen en el portal de los padres. No se envían por correo electrónico.</p></div>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-q">¿Puedo ver el historial de grupos de una alumna?</div>
+    <div class="faq-a"><p>Sí. En el detalle de la familia, haz clic en <strong>Historial</strong> en la tarjeta de la alumna. Verás todos los grupos por los que ha pasado con sus fechas de entrada y salida.</p></div>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-q">¿Qué pasa si genero dos veces las mensualidades del mismo período?</div>
+    <div class="faq-a"><p>El sistema detecta que ya existe la mensualidad de ese período y no la duplica. Puedes ejecutar la generación con tranquilidad.</p></div>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-q">¿Cómo elimino una familia?</div>
+    <div class="faq-a"><p>Actualmente las familias no se eliminan para conservar el historial de cobros. Si una familia ya no es activa, puedes congelar todas sus alumnas para excluirlas de futuros cobros.</p></div>
+  </div>
+</div>
+
+<!-- ══════════════ FOOTER ══════════════ -->
+<div class="footer">
+  <div>
+    <strong>Soft<span style="color:#e91e8c">dance</span></strong> · Manual versión 1.0 · Junio 2026
+  </div>
+  <div>
+    Soporte: <a href="mailto:hola@softdance.co">hola@softdance.co</a>
+  </div>
+</div>
+
+</body>
+</html>

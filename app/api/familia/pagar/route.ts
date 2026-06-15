@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Wompi no configurado' }, { status: 400 })
   }
 
-  const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://softdance.vercel.app'
+  const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://softdance.grialtech.co'
   const currency = 'COP'
 
   // --- Mensualidad ---

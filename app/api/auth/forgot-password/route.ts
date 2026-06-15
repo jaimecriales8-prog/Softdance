@@ -3,7 +3,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { enviarResetPassword } from '@/lib/email'
 import { NextRequest, NextResponse } from 'next/server'
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://softdance.vercel.app'
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://softdance.grialtech.co'
 
 // Rate limit: máx 3 intentos por IP cada 10 minutos
 const attempts = new Map<string, { count: number; reset: number }>()

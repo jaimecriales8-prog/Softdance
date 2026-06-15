@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "manual",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["serve", "docs", "--no-clipboard"],
+      "port": 4000,
+      "autoPort": true
+    }
+  ]
+}

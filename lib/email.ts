@@ -1,6 +1,6 @@
 const RESEND_API_KEY = process.env.RESEND_API_KEY
 const FROM = process.env.EMAIL_FROM ?? 'Softdance <onboarding@resend.dev>'
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://softdance.vercel.app'
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://softdance.grialtech.co'
 
 function esc(text: string) {
   return String(text).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!))
@@ -168,7 +168,7 @@ function emailHtml(titulo: string, contenido: string) {
       <div style="color:#ccc;font-size:14px;line-height:1.6">${contenido}</div>
     </div>
     <p style="margin-top:24px;color:#444;font-size:12px;text-align:center">
-      © ${new Date().getFullYear()} Softdance · <a href="${APP_URL}" style="color:#666;text-decoration:none">softdance.vercel.app</a>
+      © ${new Date().getFullYear()} Softdance · <a href="${APP_URL}" style="color:#666;text-decoration:none">softdance.grialtech.co</a>
     </p>
   </div>
 </body>
