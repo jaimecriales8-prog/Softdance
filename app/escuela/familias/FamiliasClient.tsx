@@ -14,6 +14,7 @@ const EMPTY = { nombre: '', email: '', telefono: '', password: '' }
 
 export default function FamiliasClient({ familias: inicial, escuelaId }: { familias: Familia[]; escuelaId: string }) {
   const [familias, setFamilias] = useState(inicial)
+  const [busqueda, setBusqueda] = useState('')
   const [modal, setModal] = useState<'crear' | 'editar' | 'reset' | null>(null)
   const [form, setForm] = useState(EMPTY)
   const [editId, setEditId] = useState<string | null>(null)
@@ -154,6 +155,18 @@ export default function FamiliasClient({ familias: inicial, escuelaId }: { famil
         </div>
       )}
 
+      {/* Buscador */}
+      {familias.length > 0 && (
+        <div className="mb-4">
+          <input
+            value={busqueda}
+            onChange={e => setBusqueda(e.target.value)}
+            placeholder="Buscar familia por nombre o correo…"
+            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-white/25 focus:outline-none focus:border-[#e91e8c]"
+          />
+        </div>
+      )}
+
       {/* Lista */}
       {familias.length === 0 ? (
         <div className="bg-white/5 border border-white/10 rounded-xl px-4 py-12 text-center text-white/30 text-sm">
@@ -161,7 +174,10 @@ export default function FamiliasClient({ familias: inicial, escuelaId }: { famil
         </div>
       ) : (
         <div className="grid gap-3">
-          {familias.map(f => (
+          {familias.filter(f => {
+            const q = busqueda.toLowerCase()
+            return !q || f.nombre.toLowerCase().includes(q) || f.email.toLowerCase().includes(q)
+          }).map(f => (
             <div key={f.id} className="bg-white/5 border border-white/10 rounded-xl px-5 py-4 flex items-center justify-between hover:bg-white/[0.07] transition-colors">
               <div className="flex items-center gap-4">
                 <div className="w-9 h-9 rounded-full bg-[#e91e8c]/20 flex items-center justify-center text-[#e91e8c] font-bold text-sm">

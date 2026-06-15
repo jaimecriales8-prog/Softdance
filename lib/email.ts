@@ -118,6 +118,28 @@ export async function enviarRecordatorioPago({
   })
 }
 
+export async function enviarConfirmacionPago({
+  email, nombreFamilia, concepto, monto,
+}: {
+  email: string; nombreFamilia: string; concepto: string; monto: number
+}) {
+  await sendEmail({
+    to: email,
+    subject: `Pago confirmado — ${concepto}`,
+    html: emailHtml('Pago recibido ✓', `
+      <p>Hola, <strong>${nombreFamilia}</strong>. Confirmamos que recibimos tu pago:</p>
+      <div style="background:#1a1a1a;border-radius:12px;padding:20px;margin:20px 0;text-align:center">
+        <p style="margin:0 0 4px;color:#999;font-size:13px">${concepto}</p>
+        <p style="margin:0;font-size:32px;font-weight:700;color:#4ade80">$${monto.toLocaleString('es-CO')}</p>
+        <p style="margin:8px 0 0;color:#4ade80;font-size:13px;font-weight:600">✓ Aprobado</p>
+      </div>
+      <a href="${APP_URL}/familia/recibo" style="display:inline-block;margin-top:8px;background:#e91e8c;color:#fff;text-decoration:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:600">
+        Ver mi estado de cuenta
+      </a>
+    `),
+  })
+}
+
 export async function enviarResetPassword({
   email, nombre, resetUrl,
 }: {

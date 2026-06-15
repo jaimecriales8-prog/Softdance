@@ -14,6 +14,7 @@ type EventoAlumna = {
   eventos: { nombre: string; fecha: string | null; num_cuotas: number }
   alumnas: { nombre: string }
 }
+type Matricula = { id: string; anio: number; valor: number; estado: string }
 type Familia = { id: string; nombre: string; email: string; telefono: string | null; alumnas: { id: string; nombre: string }[] }
 type Escuela = { nombre: string; info_pago?: string | null; cobro_activo?: boolean }
 
@@ -26,11 +27,13 @@ function fmtFecha(f: string) {
   return new Date(f + 'T12:00:00').toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
-function PagarButton({ id, tipo, monto, cuotaNumero }: { id: string; tipo: 'mens' | 'evento'; monto: number; cuotaNumero?: number }) {
+function PagarButton({ id, tipo, monto, cuotaNumero }: { id: string; tipo: 'mens' | 'mat' | 'evento'; monto: number; cuotaNumero?: number }) {
   const [loading, setLoading] = useState(false)
   async function pagar() {
     setLoading(true)
-    const body = tipo === 'mens' ? { mensualidad_id: id } : { evento_alumna_id: id, cuota_numero: cuotaNumero ?? 1 }
+    const body = tipo === 'mens' ? { mensualidad_id: id }
+      : tipo === 'mat' ? { matricula_id: id }
+      : { evento_alumna_id: id, cuota_numero: cuotaNumero ?? 1 }
     const res = await fetch('/api/familia/pagar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
     const data = await res.json()
     if (res.ok) window.location.href = data.url
@@ -67,12 +70,15 @@ function InfoPagoInline({ info }: { info: string }) {
   )
 }
 
-export default function ReciboFamiliaClient({ familia, escuela, mensualidades, eventos, tieneWompi, infoPago }: {
+export default function ReciboFamiliaClient({ familia, escuela, mensualidades, eventos, matriculas, tieneWompi, infoPago }: {
   familia: Familia; escuela: Escuela; mensualidades: Mensualidad[]; eventos: EventoAlumna[]
-  tieneWompi: boolean; infoPago: string | null
+  matriculas: Matricula[]; tieneWompi: boolean; infoPago: string | null
 }) {
   const totalPendienteMens = mensualidades.filter(m => m.estado === 'pendiente').reduce((s, m) => s + m.total, 0)
   const totalPagadoMens = mensualidades.filter(m => m.estado === 'pagado').reduce((s, m) => s + m.total, 0)
+
+  const totalPendienteMat = matriculas.filter(m => m.estado === 'pendiente').reduce((s, m) => s + m.valor, 0)
+  const totalPagadoMat = matriculas.filter(m => m.estado === 'pagado').reduce((s, m) => s + m.valor, 0)
 
   const totalPendienteEv = eventos.reduce((s, ev) => {
     const cuotas = ev.cuotas ?? []
@@ -120,10 +126,14 @@ export default function ReciboFamiliaClient({ familia, escuela, mensualidades, e
         </div>
 
         {/* Resumen */}
-        <div className="grid grid-cols-2 gap-3 mb-6 print:grid-cols-4 print:gap-2">
+        <div className="grid grid-cols-2 gap-3 mb-6 print:grid-cols-3 print:gap-2">
           {[
             { label: 'Mensualidades pendientes', value: totalPendienteMens, color: 'text-yellow-400' },
             { label: 'Mensualidades pagadas', value: totalPagadoMens, color: 'text-green-400' },
+            ...(matriculas.length > 0 ? [
+              { label: 'Matrícula pendiente', value: totalPendienteMat, color: 'text-yellow-400' },
+              { label: 'Matrícula pagada', value: totalPagadoMat, color: 'text-green-400' },
+            ] : []),
             { label: 'Eventos pendientes', value: totalPendienteEv, color: 'text-yellow-400' },
             { label: 'Eventos pagados', value: totalPagadoEv, color: 'text-green-400' },
           ].map(s => (
@@ -189,6 +199,43 @@ export default function ReciboFamiliaClient({ familia, escuela, mensualidades, e
             </div>
           )}
         </section>
+
+        {/* Matrículas */}
+        {matriculas.length > 0 && (
+          <section className="mb-8">
+            <h2 className="text-base font-semibold text-white mb-3 print:text-black print:text-lg">Matrículas</h2>
+            <div className="bg-white/5 border border-white/10 rounded-xl overflow-hidden print:bg-white print:border-gray-200">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-white/10 print:border-gray-200 print:bg-gray-50">
+                    <th className="text-left text-white/40 text-xs uppercase tracking-wider px-4 py-2.5 print:text-gray-500">Año</th>
+                    <th className="text-right text-white/40 text-xs uppercase tracking-wider px-4 py-2.5 print:text-gray-500">Valor</th>
+                    <th className="text-right text-white/40 text-xs uppercase tracking-wider px-4 py-2.5 print:text-gray-500">Estado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {matriculas.map((mat, i) => (
+                    <tr key={mat.id} className={i < matriculas.length - 1 ? 'border-b border-white/5 print:border-gray-100' : ''}>
+                      <td className="px-4 py-3 text-white font-medium print:text-black">{mat.anio}</td>
+                      <td className="px-4 py-3 text-right text-white font-medium print:text-black">${mat.valor.toLocaleString('es-CO')}</td>
+                      <td className="px-4 py-3 text-right">
+                        {mat.estado === 'pagado' ? (
+                          <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-green-500/15 text-green-400 print:bg-green-100 print:text-green-700">Pagada</span>
+                        ) : (
+                          <div className="flex flex-col items-end gap-1.5">
+                            <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-yellow-500/15 text-yellow-400 print:bg-yellow-100 print:text-yellow-700">Pendiente</span>
+                            {tieneWompi && <PagarButton id={mat.id} tipo="mat" monto={mat.valor} />}
+                            {infoPago && <InfoPagoInline info={infoPago} />}
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        )}
 
         {/* Eventos */}
         {eventos.length > 0 && (

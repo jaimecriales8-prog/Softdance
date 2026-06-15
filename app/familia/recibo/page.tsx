@@ -20,7 +20,7 @@ export default async function FamiliaReciboPage() {
 
   const tieneWompi = !!configPagos?.wompi_pub_key && escuela?.cobro_activo
 
-  const [{ data: mensualidades }, { data: eventos }] = await Promise.all([
+  const [{ data: mensualidades }, { data: eventos }, { data: matriculas }] = await Promise.all([
     supabase.from('mensualidades')
       .select('id, periodo, subtotal, descuento, total, estado, fecha_limite, detalle')
       .eq('familia_id', familiaId)
@@ -29,6 +29,10 @@ export default async function FamiliaReciboPage() {
       .select('id, estado, total, cuotas, lineas, eventos(nombre, fecha, num_cuotas), alumnas(nombre)')
       .in('alumna_id', (familia?.alumnas as any[] ?? []).map((a: any) => a.id))
       .order('created_at', { ascending: false }),
+    supabase.from('matriculas')
+      .select('id, anio, valor, estado')
+      .eq('familia_id', familiaId)
+      .order('anio', { ascending: false }),
   ])
 
   return (
@@ -37,6 +41,7 @@ export default async function FamiliaReciboPage() {
       escuela={escuela!}
       mensualidades={(mensualidades ?? []) as any[]}
       eventos={(eventos ?? []) as any[]}
+      matriculas={(matriculas ?? []) as any[]}
       tieneWompi={tieneWompi}
       infoPago={escuela?.info_pago ?? null}
     />

@@ -47,6 +47,7 @@ export default function CobrosClient({ escuela, mensualidades: inicial, eventos:
   // Matrículas / familias state
   const [matriculas, setMatriculas] = useState(inicialesMatriculas)
   const [familiaAbierta, setFamiliaAbierta] = useState<string | null>(null)
+  const [busquedaFamilias, setBusquedaFamilias] = useState('')
 
   // Eventos state
   const [eventos, setEventos] = useState(inicialeventos)
@@ -159,6 +160,35 @@ export default function CobrosClient({ escuela, mensualidades: inicial, eventos:
   }).filter(r => r.mens.length > 0 || r.mat || r.eventosAlumna.length > 0)
     .sort((a, b) => b.totalPendiente - a.totalPendiente)
 
+  function exportarCSV() {
+    const MESES_CSV = ['','Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+    const filas: string[][] = [['Familia', 'Email', 'Concepto', 'Monto', 'Estado']]
+    for (const { familia: f, mens, mat, eventosAlumna } of resumenFamilias) {
+      for (const m of mens) {
+        const [a, mo] = m.periodo.split('-').map(Number)
+        filas.push([f.nombre, f.email, `Mensualidad ${MESES_CSV[mo]} ${a}`, String(m.total), m.estado])
+      }
+      if (mat) filas.push([f.nombre, f.email, `Matrícula ${mat.anio}`, String(mat.valor), mat.estado])
+      for (const p of eventosAlumna as any[]) {
+        const cuotas = (p.cuotas ?? []) as { numero: number; estado: string }[]
+        if (cuotas.length > 1) {
+          for (const c of cuotas) {
+            const monto = Math.round(p.total / cuotas.length)
+            filas.push([f.nombre, f.email, `${p.eventoNombre} — cuota ${c.numero}`, String(monto), c.estado])
+          }
+        } else {
+          filas.push([f.nombre, f.email, p.eventoNombre, String(p.total), p.estado])
+        }
+      }
+    }
+    const csv = filas.map(r => r.map(v => `"${v.replace(/"/g, '""')}"`).join(',')).join('\n')
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url; a.download = `cobros-${periodoFiltro}.csv`; a.click()
+    URL.revokeObjectURL(url)
+  }
+
   const eventosPendientes = eventos.filter(ev => ev.evento_alumna.some(p => {
     const cuotas = p.cuotas ?? []
     return cuotas.some(c => c.estado === 'pendiente')
@@ -258,21 +288,36 @@ export default function CobrosClient({ escuela, mensualidades: inicial, eventos:
       {/* ── Tab Por familia ── */}
       {tab === 'familias' && (
         <div>
+          {/* Buscador y selector de período */}
+          <div className="flex items-center gap-3 mb-4">
+            <input
+              value={busquedaFamilias}
+              onChange={e => setBusquedaFamilias(e.target.value)}
+              placeholder="Buscar familia…"
+              className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white placeholder-white/25 focus:outline-none focus:border-[#e91e8c]"
+            />
+          </div>
           {/* Selector de período */}
-          <div className="flex items-center gap-3 mb-5">
-            <select value={periodoFiltro} onChange={e => setPeriodoFiltro(e.target.value)}
-              className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#e91e8c]">
-              {[...new Set(mensualidades.map(m => m.periodo))].sort().reverse().map(p => {
-                const [a, m] = p.split('-').map(Number)
-                return <option key={p} value={p}>{MESES_FULL[m]} {a}</option>
-              })}
-              {!mensualidades.some(m => m.periodo === periodoFiltro) && (
-                <option value={periodoFiltro}>{MESES_FULL[mesNum]} {anio}</option>
-              )}
-            </select>
-            <p className="text-white/40 text-sm">
-              {resumenFamilias.filter(r => r.totalPendiente > 0).length} familias con saldo pendiente
-            </p>
+          <div className="flex items-center justify-between gap-3 mb-5 flex-wrap">
+            <div className="flex items-center gap-3">
+              <select value={periodoFiltro} onChange={e => setPeriodoFiltro(e.target.value)}
+                className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#e91e8c]">
+                {[...new Set(mensualidades.map(m => m.periodo))].sort().reverse().map(p => {
+                  const [a, m] = p.split('-').map(Number)
+                  return <option key={p} value={p}>{MESES_FULL[m]} {a}</option>
+                })}
+                {!mensualidades.some(m => m.periodo === periodoFiltro) && (
+                  <option value={periodoFiltro}>{MESES_FULL[mesNum]} {anio}</option>
+                )}
+              </select>
+              <p className="text-white/40 text-sm">
+                {resumenFamilias.filter(r => r.totalPendiente > 0).length} familias con saldo pendiente
+              </p>
+            </div>
+            <button onClick={exportarCSV}
+              className="text-xs border border-white/10 text-white/50 hover:text-white hover:border-white/30 px-3 py-2 rounded-lg transition-colors">
+              Exportar CSV
+            </button>
           </div>
 
           {resumenFamilias.length === 0 ? (
@@ -281,7 +326,10 @@ export default function CobrosClient({ escuela, mensualidades: inicial, eventos:
             </div>
           ) : (
             <div className="space-y-3">
-              {resumenFamilias.map(({ familia: f, mens, mat, eventosAlumna, pendientesMens, pendientesEventos, pendienteMat, totalPendiente }) => {
+              {resumenFamilias.filter(r => {
+                const q = busquedaFamilias.toLowerCase()
+                return !q || r.familia.nombre.toLowerCase().includes(q) || r.familia.email.toLowerCase().includes(q)
+              }).map(({ familia: f, mens, mat, eventosAlumna, pendientesMens, pendientesEventos, pendienteMat, totalPendiente }) => {
                 const openFam = familiaAbierta === f.id
                 return (
                   <div key={f.id} className={`border rounded-xl overflow-hidden transition-colors ${totalPendiente > 0 ? 'border-[#e91e8c]/20 bg-[#e91e8c]/5' : 'border-white/10 bg-white/5'}`}>
