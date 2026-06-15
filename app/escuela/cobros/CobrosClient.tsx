@@ -19,14 +19,19 @@ type Evento = {
   precio: number; fecha: string | null; num_cuotas: number
   evento_alumna: Participante[]
 }
+type Matricula = { id: string; familia_id: string; anio: number; valor: number; estado: string }
+type Familia = { id: string; nombre: string; email: string; telefono: string | null }
 
-export default function CobrosClient({ escuela, mensualidades: inicial, eventos: inicialeventos, periodoActual }: {
+export default function CobrosClient({ escuela, mensualidades: inicial, eventos: inicialeventos, matriculas: inicialesMatriculas, familias, periodoActual, anioActual }: {
   escuela: { id: string; meses_activos: number[] }
   mensualidades: Mensualidad[]
   eventos: Evento[]
+  matriculas: Matricula[]
+  familias: Familia[]
   periodoActual: string
+  anioActual: number
 }) {
-  const [tab, setTab] = useState<'mensualidades' | 'eventos'>('mensualidades')
+  const [tab, setTab] = useState<'familias' | 'mensualidades' | 'eventos'>('familias')
 
   // Mensualidades state
   const [mensualidades, setMensualidades] = useState(inicial)
@@ -38,6 +43,10 @@ export default function CobrosClient({ escuela, mensualidades: inicial, eventos:
   const [descuentoModal, setDescuentoModal] = useState<Mensualidad | null>(null)
   const [descuentoValor, setDescuentoValor] = useState('')
   const [guardandoDescuento, setGuardandoDescuento] = useState(false)
+
+  // Matrículas / familias state
+  const [matriculas, setMatriculas] = useState(inicialesMatriculas)
+  const [familiaAbierta, setFamiliaAbierta] = useState<string | null>(null)
 
   // Eventos state
   const [eventos, setEventos] = useState(inicialeventos)
@@ -118,6 +127,37 @@ export default function CobrosClient({ escuela, mensualidades: inicial, eventos:
       ))
     }
   }
+
+  async function marcarMatriculaPagada(id: string) {
+    const supabaseClient = createClient()
+    await supabaseClient.from('matriculas').update({ estado: 'pagado' }).eq('id', id)
+    setMatriculas(matriculas.map(m => m.id === id ? { ...m, estado: 'pagado' } : m))
+  }
+
+  // ─── Vista por familia ────────────────────────────────────────
+  const resumenFamilias = familias.map(f => {
+    const mens = mensualidades.filter(m => m.familia_id === f.id && m.periodo === periodoFiltro)
+    const mat = matriculas.find(m => m.familia_id === f.id)
+    const eventosAlumna = eventos.flatMap(ev =>
+      ev.evento_alumna
+        .filter((p: any) => {
+          const fam = Array.isArray(p.alumnas?.familias) ? p.alumnas.familias[0] : p.alumnas?.familias
+          return fam?.id === f.id
+        })
+        .map((p: any) => ({ ...p, eventoNombre: ev.nombre, eventoId: ev.id, numCuotas: ev.num_cuotas }))
+    )
+    const pendientesMens = mens.filter(m => m.estado === 'pendiente').reduce((s, m) => s + m.total, 0)
+    const pendientesEventos = eventosAlumna.reduce((s: number, p: any) => {
+      const cuotas = (p.cuotas ?? []) as Cuota[]
+      const pend = cuotas.filter(c => c.estado === 'pendiente').length
+      const total = cuotas.length || 1
+      return s + pend * (p.total / total)
+    }, 0)
+    const pendienteMat = mat?.estado === 'pendiente' ? mat.valor : 0
+    const totalPendiente = pendientesMens + pendientesEventos + pendienteMat
+    return { familia: f, mens, mat, eventosAlumna, pendientesMens, pendientesEventos, pendienteMat, totalPendiente }
+  }).filter(r => r.mens.length > 0 || r.mat || r.eventosAlumna.length > 0)
+    .sort((a, b) => b.totalPendiente - a.totalPendiente)
 
   const eventosPendientes = eventos.filter(ev => ev.evento_alumna.some(p => {
     const cuotas = p.cuotas ?? []
@@ -207,13 +247,154 @@ export default function CobrosClient({ escuela, mensualidades: inicial, eventos:
 
       {/* Tabs */}
       <div className="flex gap-1 bg-white/5 border border-white/10 rounded-xl p-1 mb-6 w-fit">
-        {(['mensualidades', 'eventos'] as const).map(t => (
+        {([['familias', 'Por familia'], ['mensualidades', 'Mensualidades'], ['eventos', 'Eventos']] as const).map(([t, label]) => (
           <button key={t} onClick={() => setTab(t)}
-            className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors capitalize ${tab === t ? 'bg-[#e91e8c] text-white' : 'text-white/50 hover:text-white'}`}>
-            {t === 'mensualidades' ? 'Mensualidades' : 'Eventos'}
+            className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors ${tab === t ? 'bg-[#e91e8c] text-white' : 'text-white/50 hover:text-white'}`}>
+            {label}
           </button>
         ))}
       </div>
+
+      {/* ── Tab Por familia ── */}
+      {tab === 'familias' && (
+        <div>
+          {/* Selector de período */}
+          <div className="flex items-center gap-3 mb-5">
+            <select value={periodoFiltro} onChange={e => setPeriodoFiltro(e.target.value)}
+              className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#e91e8c]">
+              {[...new Set(mensualidades.map(m => m.periodo))].sort().reverse().map(p => {
+                const [a, m] = p.split('-').map(Number)
+                return <option key={p} value={p}>{MESES_FULL[m]} {a}</option>
+              })}
+              {!mensualidades.some(m => m.periodo === periodoFiltro) && (
+                <option value={periodoFiltro}>{MESES_FULL[mesNum]} {anio}</option>
+              )}
+            </select>
+            <p className="text-white/40 text-sm">
+              {resumenFamilias.filter(r => r.totalPendiente > 0).length} familias con saldo pendiente
+            </p>
+          </div>
+
+          {resumenFamilias.length === 0 ? (
+            <div className="bg-white/5 border border-white/10 rounded-xl px-4 py-12 text-center text-white/30 text-sm">
+              No hay cobros para este período
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {resumenFamilias.map(({ familia: f, mens, mat, eventosAlumna, pendientesMens, pendientesEventos, pendienteMat, totalPendiente }) => {
+                const openFam = familiaAbierta === f.id
+                return (
+                  <div key={f.id} className={`border rounded-xl overflow-hidden transition-colors ${totalPendiente > 0 ? 'border-[#e91e8c]/20 bg-[#e91e8c]/5' : 'border-white/10 bg-white/5'}`}>
+                    <button onClick={() => setFamiliaAbierta(openFam ? null : f.id)}
+                      className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-white/5 transition-colors">
+                      <div>
+                        <p className="text-white font-medium">{f.nombre}</p>
+                        <p className="text-white/40 text-xs">{f.email}</p>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        {totalPendiente > 0 ? (
+                          <p className="text-[#e91e8c] font-bold">${totalPendiente.toLocaleString('es-CO')} pendiente</p>
+                        ) : (
+                          <span className="text-xs text-green-400 font-medium">✓ Al día</span>
+                        )}
+                        <span className="text-white/30 text-xs">{openFam ? '▲' : '▼'}</span>
+                      </div>
+                    </button>
+
+                    {openFam && (
+                      <div className="border-t border-white/10 px-5 py-3 space-y-2">
+                        {/* Mensualidad */}
+                        {mens.map(m => (
+                          <div key={m.id} className="flex items-center justify-between py-1.5">
+                            <div>
+                              <p className="text-sm text-white">Mensualidad {MESES_FULL[parseInt(m.periodo.split('-')[1])]} {m.periodo.split('-')[0]}</p>
+                              <p className="text-xs text-white/40">${m.total.toLocaleString('es-CO')}</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {m.estado === 'pagado' ? (
+                                <span className="text-xs text-green-400">✓ Pagado</span>
+                              ) : (
+                                <>
+                                  <span className="text-xs text-yellow-400">Pendiente</span>
+                                  <button onClick={() => marcarPagada(m)}
+                                    className="text-xs bg-green-500/10 text-green-400 hover:bg-green-500/20 px-2 py-0.5 rounded transition-colors">
+                                    Marcar pagada
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+
+                        {/* Matrícula */}
+                        {mat && (
+                          <div className="flex items-center justify-between py-1.5 border-t border-white/5">
+                            <div>
+                              <p className="text-sm text-white">Matrícula {mat.anio}</p>
+                              <p className="text-xs text-white/40">${mat.valor.toLocaleString('es-CO')}</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {mat.estado === 'pagado' ? (
+                                <span className="text-xs text-green-400">✓ Pagada</span>
+                              ) : (
+                                <>
+                                  <span className="text-xs text-yellow-400">Pendiente</span>
+                                  <button onClick={() => marcarMatriculaPagada(mat.id)}
+                                    className="text-xs bg-green-500/10 text-green-400 hover:bg-green-500/20 px-2 py-0.5 rounded transition-colors">
+                                    Marcar pagada
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Eventos */}
+                        {eventosAlumna.map((p: any) => {
+                          const cuotas = (p.cuotas ?? []) as Cuota[]
+                          const pagadas = cuotas.filter(c => c.estado === 'pagado').length
+                          const pendientes = cuotas.filter(c => c.estado === 'pendiente').length
+                          const montoCuota = cuotas.length > 0 ? Math.round(p.total / cuotas.length) : p.total
+                          const ev = eventos.find(e => e.id === p.eventoId)
+                          return (
+                            <div key={p.id} className="flex items-center justify-between py-1.5 border-t border-white/5">
+                              <div>
+                                <p className="text-sm text-white">{p.eventoNombre}</p>
+                                <p className="text-xs text-white/40">
+                                  {p.alumnas?.nombre} · {cuotas.length > 1 ? `${pagadas}/${cuotas.length} cuotas · $${montoCuota.toLocaleString('es-CO')} c/u` : `$${p.total.toLocaleString('es-CO')}`}
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                {pendientes === 0 ? (
+                                  <span className="text-xs text-green-400">✓ Pagado</span>
+                                ) : (
+                                  <>
+                                    <span className="text-xs text-yellow-400">{cuotas.length > 1 ? `${pendientes} cuota${pendientes > 1 ? 's' : ''} pend.` : 'Pendiente'}</span>
+                                    {ev && cuotas.filter(c => c.estado === 'pendiente').slice(0, 1).map(c => (
+                                      <button key={c.numero} onClick={() => marcarCuota(ev, p, c.numero)}
+                                        className="text-xs bg-green-500/10 text-green-400 hover:bg-green-500/20 px-2 py-0.5 rounded transition-colors">
+                                        {cuotas.length > 1 ? `Marcar cuota ${c.numero}` : 'Marcar pagado'}
+                                      </button>
+                                    ))}
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          )
+                        })}
+
+                        {mens.length === 0 && !mat && eventosAlumna.length === 0 && (
+                          <p className="text-white/30 text-xs py-1">Sin cobros en este período</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── Tab Mensualidades ── */}
       {tab === 'mensualidades' && (

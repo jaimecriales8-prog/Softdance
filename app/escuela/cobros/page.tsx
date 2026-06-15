@@ -9,8 +9,9 @@ export default async function CobrosPage() {
 
   const now = new Date()
   const periodoActual = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+  const anioActual = now.getFullYear()
 
-  const [{ data: escuela }, { data: mensualidades }, { data: eventos }] = await Promise.all([
+  const [{ data: escuela }, { data: mensualidades }, { data: eventos }, { data: matriculas }, { data: familias }] = await Promise.all([
     supabase.from('escuelas').select('id, meses_activos').eq('id', escuelaId).single(),
     supabase.from('mensualidades')
       .select('id, familia_id, periodo, subtotal, descuento, total, estado, fecha_limite, detalle, familias(nombre, email, telefono)')
@@ -18,9 +19,17 @@ export default async function CobrosPage() {
       .order('periodo', { ascending: false })
       .order('created_at', { ascending: false }),
     supabase.from('eventos')
-      .select('*, evento_alumna(id, estado, total, cuotas, lineas, alumnas(id, nombre, familias(nombre)))')
+      .select('*, evento_alumna(id, estado, total, cuotas, lineas, alumnas(id, nombre, familias(id, nombre)))')
       .eq('escuela_id', escuelaId)
       .order('fecha', { ascending: false }),
+    supabase.from('matriculas')
+      .select('id, familia_id, anio, valor, estado')
+      .eq('escuela_id', escuelaId)
+      .eq('anio', anioActual),
+    supabase.from('familias')
+      .select('id, nombre, email, telefono')
+      .eq('escuela_id', escuelaId)
+      .order('nombre'),
   ])
 
   return (
@@ -28,7 +37,10 @@ export default async function CobrosPage() {
       escuela={escuela ?? { id: escuelaId, meses_activos: [] }}
       mensualidades={(mensualidades ?? []) as any[]}
       eventos={(eventos ?? []) as any[]}
+      matriculas={(matriculas ?? []) as any[]}
+      familias={(familias ?? []) as any[]}
       periodoActual={periodoActual}
+      anioActual={anioActual}
     />
   )
 }
