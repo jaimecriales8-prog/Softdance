@@ -178,7 +178,7 @@ export default function ReciboFamiliaClient({ familia, escuela, mensualidades, e
                           <div className="flex flex-col items-end gap-1.5">
                             <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-yellow-500/15 text-yellow-400 print:bg-yellow-100 print:text-yellow-700">Pendiente</span>
                             {tieneWompi && <PagarButton id={m.id} tipo="mens" monto={m.total} />}
-                            {!tieneWompi && infoPago && <InfoPagoInline info={infoPago} />}
+                            {infoPago && <InfoPagoInline info={infoPago} />}
                           </div>
                         )}
                       </td>
@@ -227,7 +227,7 @@ export default function ReciboFamiliaClient({ familia, escuela, mensualidades, e
                                 {pagadas > 0 ? `${pagadas}/${ev.eventos.num_cuotas} cuotas` : 'Pendiente'}
                               </span>
                               {tieneWompi && proxCuota && <PagarButton id={ev.id} tipo="evento" monto={montoCuota} cuotaNumero={proxCuota.numero} />}
-                              {!tieneWompi && infoPago && <InfoPagoInline info={infoPago} />}
+                              {infoPago && <InfoPagoInline info={infoPago} />}
                             </div>
                           )}
                         </td>
