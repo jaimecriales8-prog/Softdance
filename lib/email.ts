@@ -2,6 +2,10 @@ const RESEND_API_KEY = process.env.RESEND_API_KEY
 const FROM = process.env.EMAIL_FROM ?? 'Softdance <onboarding@resend.dev>'
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://softdance.vercel.app'
 
+function esc(text: string) {
+  return String(text).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!))
+}
+
 async function sendEmail({ to, subject, html }: { to: string; subject: string; html: string }) {
   if (!RESEND_API_KEY) return
   await fetch('https://api.resend.com/emails', {
@@ -30,9 +34,9 @@ export async function enviarBienvenida({
   await sendEmail({
     to: email,
     subject: 'Bienvenido/a a Softdance — tu cuenta está lista',
-    html: emailHtml(`Bienvenido/a, ${nombre}`, `
+    html: emailHtml(`Bienvenido/a, ${esc(nombre)}`, `
       <p>Tu cuenta en <strong>Softdance</strong> ha sido creada. Tu correo de acceso es:</p>
-      <div style="background:#1a1a1a;border-radius:8px;padding:12px 16px;margin:20px 0;font-size:14px;color:#fff">${email}</div>
+      <div style="background:#1a1a1a;border-radius:8px;padding:12px 16px;margin:20px 0;font-size:14px;color:#fff">${esc(email)}</div>
       <p style="color:#999;font-size:13px">La contraseña de acceso la recibirás directamente del administrador de tu escuela.</p>
       <a href="${portalUrl}" style="display:inline-block;margin-top:8px;background:#e91e8c;color:#fff;text-decoration:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:600">
         Acceder a ${rolLabel}
@@ -55,17 +59,17 @@ export async function enviarNuevaMensualidad({
     : null
 
   const detalleHtml = detalle.map(d => `
-    <p style="margin:12px 0 4px;font-size:13px;font-weight:600;color:#fff">${d.alumna}</p>
+    <p style="margin:12px 0 4px;font-size:13px;font-weight:600;color:#fff">${esc(d.alumna)}</p>
     ${d.lineas.map(l => `
       <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.05);font-size:13px;color:#999">
-        <span>${l.concepto}</span><span style="color:#ccc">$${l.valor.toLocaleString('es-CO')}</span>
+        <span>${esc(l.concepto)}</span><span style="color:#ccc">$${l.valor.toLocaleString('es-CO')}</span>
       </div>`).join('')}`).join('')
 
   await sendEmail({
     to: email,
     subject: `Mensualidad ${mesLabel} — $${total.toLocaleString('es-CO')}`,
     html: emailHtml(`Mensualidad ${mesLabel}`, `
-      <p>Hola, <strong>${nombreFamilia}</strong>. Tu mensualidad de <strong>${mesLabel}</strong> ya está disponible.</p>
+      <p>Hola, <strong>${esc(nombreFamilia)}</strong>. Tu mensualidad de <strong>${mesLabel}</strong> ya está disponible.</p>
       <div style="background:#1a1a1a;border-radius:12px;padding:20px;margin:20px 0">
         ${detalleHtml}
         <div style="display:flex;justify-content:space-between;padding:12px 0 0;margin-top:8px;border-top:1px solid rgba(255,255,255,0.1);font-size:15px;font-weight:700">
@@ -95,7 +99,7 @@ export async function enviarRecordatorioPago({
     to: email,
     subject: `Recordatorio: mensualidad ${mesLabel} vence el ${vence}`,
     html: emailHtml('Recordatorio de pago', `
-      <p>Hola, <strong>${nombreFamilia}</strong>. Te recordamos que tu mensualidad de <strong>${mesLabel}</strong> vence en 3 días.</p>
+      <p>Hola, <strong>${esc(nombreFamilia)}</strong>. Te recordamos que tu mensualidad de <strong>${mesLabel}</strong> vence en 3 días.</p>
       <div style="background:#1a1a1a;border-radius:12px;padding:20px;margin:20px 0;text-align:center">
         <p style="margin:0 0 4px;color:#999;font-size:13px">Total pendiente</p>
         <p style="margin:0;font-size:32px;font-weight:700;color:#e91e8c">$${total.toLocaleString('es-CO')}</p>
@@ -118,9 +122,9 @@ export async function enviarConfirmacionPago({
     to: email,
     subject: `Pago confirmado — ${concepto}`,
     html: emailHtml('Pago recibido ✓', `
-      <p>Hola, <strong>${nombreFamilia}</strong>. Confirmamos que recibimos tu pago:</p>
+      <p>Hola, <strong>${esc(nombreFamilia)}</strong>. Confirmamos que recibimos tu pago:</p>
       <div style="background:#1a1a1a;border-radius:12px;padding:20px;margin:20px 0;text-align:center">
-        <p style="margin:0 0 4px;color:#999;font-size:13px">${concepto}</p>
+        <p style="margin:0 0 4px;color:#999;font-size:13px">${esc(concepto)}</p>
         <p style="margin:0;font-size:32px;font-weight:700;color:#4ade80">$${monto.toLocaleString('es-CO')}</p>
         <p style="margin:8px 0 0;color:#4ade80;font-size:13px;font-weight:600">✓ Aprobado</p>
       </div>

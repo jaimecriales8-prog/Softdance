@@ -5,7 +5,26 @@ import { NextRequest, NextResponse } from 'next/server'
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://softdance.vercel.app'
 
+// Rate limit: máx 3 intentos por IP cada 10 minutos
+const attempts = new Map<string, { count: number; reset: number }>()
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now()
+  const entry = attempts.get(ip)
+  if (!entry || now > entry.reset) {
+    attempts.set(ip, { count: 1, reset: now + 10 * 60 * 1000 })
+    return true
+  }
+  if (entry.count >= 3) return false
+  entry.count++
+  return true
+}
+
 export async function POST(request: NextRequest) {
+  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown'
+  if (!checkRateLimit(ip)) {
+    return NextResponse.json({ ok: true }) // respuesta genérica para no revelar el límite
+  }
+
   const { email } = await request.json()
   if (!email) return NextResponse.json({ error: 'Correo requerido' }, { status: 400 })
 
