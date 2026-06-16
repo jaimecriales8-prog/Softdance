@@ -7,7 +7,7 @@
 - Supabase (PostgreSQL + Auth + RLS + Storage)
 - Tailwind CSS v4
 - Wompi (pagos Colombia) — integrado: checkout + webhook
-- Resend (emails) — integrado: bienvenida + reset + notificación mensualidad + recordatorio pago
+- Resend (emails) — integrado: bienvenida + reset + notificación mensualidad + recordatorio pago + confirmación de pago
 
 ## Ubicación
 `/Users/jaimecriales/Sites/softdance`
@@ -15,7 +15,7 @@
 ## Repositorio y despliegue
 - **GitHub**: https://github.com/jaimecriales8-prog/Softdance.git
 - **Rama principal**: `main`
-- **Producción**: https://softdance.vercel.app (Vercel — auto-deploy en push a main)
+- **Producción**: https://softdance.grialtech.co (Vercel — auto-deploy en push a main; dominio anterior `softdance.vercel.app` sigue funcionando como fallback)
 - **Proyecto Supabase**: `obettdqtoyqwxstuevun` — https://obettdqtoyqwxstuevun.supabase.co
 
 ## Arquitectura multi-tenant
@@ -114,11 +114,13 @@ mi_profesor_id()  -- profesor_id del usuario actual (desde profesores.user_id)
 - `lib/supabase/service.ts` → service role (bypasa RLS para admin y cron)
 
 ## Email — `lib/email.ts`
-- `enviarBienvenida({ email, nombre, password, rol })` — al crear familia, profesor o admin_escuela
+- `enviarBienvenida({ email, nombre, password, rol })` — al crear familia, profesor o admin_escuela. Ya NO incluye la contraseña en el correo (riesgo de seguridad); el admin la comparte directamente
 - `enviarResetPassword({ email, nombre, resetUrl })` — desde `/api/auth/forgot-password`
 - `enviarNuevaMensualidad({ email, nombreFamilia, periodo, total, fechaLimite, detalle })` — al generar mensualidad (cron día 1)
 - `enviarRecordatorioPago({ email, nombreFamilia, periodo, total, fechaLimite })` — 3 días antes del vencimiento (cron diario)
-- Remitente configurable con `EMAIL_FROM` — producción: `Softdance <noreply@ligacaribe.co>`
+- `enviarConfirmacionPago({ email, nombreFamilia, concepto, monto })` — al aprobarse un pago Wompi (mensualidad, matrícula o cuota de evento), enviado desde el webhook
+- Remitente configurable con `EMAIL_FROM` — producción: `Softdance <noreply@ligacaribe.co>` (dominio verificado en Resend)
+- Todos los datos de usuario interpolados en el HTML pasan por `esc()` (escape de HTML) para evitar XSS
 
 ## Auth routing
 `app/dashboard/page.tsx` redirige según rol:
@@ -138,9 +140,9 @@ Flujo recuperación de contraseña: `/forgot-password` → email con enlace → 
 - Crear `admin_escuela` → recibe email de bienvenida
 
 ### `/escuela` (admin_escuela)
-- **Dashboard** — stats: grupos, familias, alumnas; campo `info_pago` para instrucciones manuales
-- **Grupos** — CRUD grupos normales y élite; panel lateral con alumnas (agregar/quitar)
-- **Familias** — CRUD familias; detalle con alumnas
+- **Dashboard** — stats: grupos, familias, alumnas, profesores activos, clases programadas (horarios), eventos activos; campo `info_pago` para instrucciones manuales
+- **Grupos** — CRUD grupos normales y élite; panel lateral con alumnas (agregar/quitar); botón Eliminar (borra horarios asociados; bloqueado si tiene alumnas/historial — usar Desactivar en ese caso)
+- **Familias** — CRUD familias; buscador en tiempo real por nombre/correo; detalle con alumnas
   - Alumna: nombre, documento, fecha_nacimiento, notas
   - Asignar grupo normal o élite (independientes, no excluyentes)
   - Quitar grupo élite activo (cierra registro con fecha_fin=hoy)
@@ -150,12 +152,13 @@ Flujo recuperación de contraseña: `/forgot-password` → email con enlace → 
   - Congelar/descongelar alumna
   - Valor mensual calculado en tiempo real
   - Recibo de pago imprimible (`/escuela/familias/[id]/recibo`)
-- **Horarios** — por grupo o actividad extra, agrupados por día
-- **Actividades extra** — CRUD, precio, tipo (mensual/único), toggle activa
-- **Profesores** — CRUD; asignar a grupos y actividades; crear usuario portal (rol='profesor') → email bienvenida
+- **Horarios** — por grupo o actividad extra, agrupados por día. Toggle de vista "Lista / Disponibilidad": la vista Disponibilidad muestra una grilla por día (7am-8pm) con columnas por salón (`Salón A`, `Salón B`, `Sin asignar`) marcando huecos libres
+- **Actividades extra** — CRUD, precio, tipo (mensual/único), toggle activa; botón Eliminar (borra horarios asociados; bloqueado si tiene alumnas asignadas — usar toggle Activa en ese caso)
+- **Profesores** — CRUD; asignar a grupos y actividades (panel lateral con toggle por grupo/actividad); crear usuario portal (rol='profesor') → email bienvenida; botón Eliminar (borra usuario de auth si tiene, asignaciones y el registro)
 - **Tarifas** — edición inline: matrícula anual, precio por grupo, precio por actividad
 - **Eventos** — CRUD con conceptos (ítems de cobro); agregar alumnas con valores individuales por concepto; cuotas
-- **Cobros** — tabs Mensualidades / Eventos
+- **Cobros** — tabs Por familia / Mensualidades / Eventos
+  - Por familia (tab default) — agrupa mensualidad + matrícula + eventos por familia, ordenado por saldo pendiente; buscador en tiempo real; botón Exportar CSV (todos los cobros del período, cuota por cuota en eventos)
   - Mensualidades: configurar meses activos, generar por período, marcar pagada, aplicar descuento, ver detalle
   - Eventos: estado de cuotas por alumna, marcar cuotas pagadas
 - **Matrículas** — generar para todas las familias o individual; marcar pagada/pendiente
@@ -167,7 +170,7 @@ Flujo recuperación de contraseña: `/forgot-password` → email con enlace → 
 - **Mensualidades** — historial con desglose; matrículas del año
 - **Eventos** — participación de sus alumnas, lineas de costo y estado de cuotas
 - **Comunicados** — avisos globales + los del grupo de sus hijas
-- **Mi estado de cuenta** — recibo imprimible: resumen pendiente/pagado de mensualidades y eventos
+- **Mi estado de cuenta** — recibo imprimible: resumen pendiente/pagado de mensualidades, matrículas y eventos; botones Pagar (Wompi) e info de pago manual en cada item pendiente
 
 ### `/profesor` (profesor)
 - Horario semanal de sus grupos y actividades asignadas
@@ -181,10 +184,13 @@ Flujo recuperación de contraseña: `/forgot-password` → email con enlace → 
 - Referencias:
   - `MENS-{mensualidad_id}` → mensualidad
   - `MAT-{matricula_id}` → matrícula
-  - `EVT-{evento_alumna_id}-{cuota_numero}` → cuota de evento
+  - `EVT-{evento_alumna_id}-{cuota_numero}` → cuota de evento (parseo con regex `/^EVT-([a-f0-9-]{36})-(\d+)$/` para evitar ambigüedad con guiones del UUID)
 - Webhook en `/api/webhooks/wompi` verifica firma y actualiza el registro correspondiente
+  - Si la escuela NO tiene `wompi_integrity_secret` configurado, la firma se considera **inválida** (antes pasaba sin validar — vulnerabilidad corregida)
+  - Al aprobar el pago, envía `enviarConfirmacionPago` a la familia (fire-and-forget)
 - Para EVT: marca la cuota como pagada; si todas las cuotas pagadas → estado='pagado'
 - `cobro_activo=true` en escuela + `wompi_pub_key` configurada → botones Pagar visibles en portal padres (mensualidades, matrículas y eventos)
+- `app/api/familia/pagar/route.ts` usa `createServiceClient()` únicamente para leer `config_pagos` (tabla sin acceso RLS para el rol padre); el resto de queries usan el cliente autenticado con scoping manual por `familia_id`
 
 ## Cron jobs
 - `/api/cron/generar-mensualidades` — día 1 de cada mes a las 6am
@@ -200,7 +206,7 @@ Flujo recuperación de contraseña: `/forgot-password` → email con enlace → 
 NEXT_PUBLIC_SUPABASE_URL
 NEXT_PUBLIC_SUPABASE_ANON_KEY
 SUPABASE_SERVICE_ROLE_KEY
-NEXT_PUBLIC_APP_URL          ← https://softdance.vercel.app
+NEXT_PUBLIC_APP_URL          ← https://softdance.grialtech.co
 CRON_SECRET                  ← autenticar cron de Vercel
 RESEND_API_KEY               ← API key de Resend
 EMAIL_FROM                   ← opcional, ej: Softdance <noreply@tudominio.com>
@@ -212,5 +218,9 @@ EMAIL_FROM                   ← opcional, ej: Softdance <noreply@tudominio.com>
 - `alumna_actividad` tiene unique constraint `(alumna_id, actividad_id, fecha_inicio)` — upsert
 - `alumnas.congelada = true` → excluida de mensualidades pero sigue en el sistema
 - `evento_alumna.lineas` por alumna sobreescribe los `conceptos` del evento (valores individuales)
-- Resend plan free solo envía a emails verificados; verificar dominio para producción real
+- Dominio de Resend verificado para producción — ya no limitado a emails verificados manualmente
 - Local `next build` puede fallar con Turbopack en CSS — usar `tsc --noEmit` para verificar tipos; Vercel usa webpack y compila bien
+- Clases tipo "acrobacia" (Acrobaby, Acrodance, Acrobacia Nivel 1/2/3) se modelan como `actividades_extra`, no como `grupos` — no tienen edades fijas ni elegibilidad por grupo de edad
+- Rate limiting en memoria (`Map` con TTL) en `/api/auth/forgot-password` — máx 3 intentos por IP cada 10 min; se resetea si la función serverless reinicia (aceptable para este volumen)
+- Validación de `conceptos` (JSONB) en eventos: máx 50 items, cada uno con `{ nombre: string, valor: number >= 0 }` — items inválidos se filtran silenciosamente
+- Dominio de producción migrado de `softdance.vercel.app` a `softdance.grialtech.co` (CNAME en GoDaddy → `cname.vercel-dns.com`)
