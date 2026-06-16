@@ -119,6 +119,19 @@ export default function GruposClient({ grupos: inicial, escuelaId }: { grupos: G
     setGrupos(grupos.map(x => x.id === g.id ? { ...x, activo: !g.activo } : x))
   }
 
+  async function eliminarGrupo(g: Grupo) {
+    if (!confirm(`¿Eliminar el grupo "${g.nombre}"? Esta acción no se puede deshacer.`)) return
+    const { error } = await supabase.from('horarios').delete().eq('grupo_id', g.id)
+    if (error) { alert('No se pudo eliminar el grupo: ' + error.message); return }
+    const { error: errorGrupo } = await supabase.from('grupos').delete().eq('id', g.id)
+    if (errorGrupo) {
+      alert('No se pudo eliminar: el grupo tiene alumnas o historial asociado. Desactívalo en su lugar.')
+      return
+    }
+    setGrupos(grupos.filter(x => x.id !== g.id))
+    if (grupoActivo?.id === g.id) setGrupoActivo(null)
+  }
+
   async function abrirPanel(g: Grupo) {
     setGrupoActivo(g)
     setPanelLoading(true)
@@ -262,13 +275,13 @@ export default function GruposClient({ grupos: inicial, escuelaId }: { grupos: G
         {/* Grupos normales */}
         <div className="mb-8">
           <h2 className="text-sm font-medium text-white/50 uppercase tracking-wider mb-3">Grupos por edad</h2>
-          <GruposTabla grupos={normales} onEditar={abrirEditar} onToggle={toggleActivo} onVerAlumnas={abrirPanel} grupoSeleccionado={grupoActivo?.id ?? null} />
+          <GruposTabla grupos={normales} onEditar={abrirEditar} onToggle={toggleActivo} onVerAlumnas={abrirPanel} onEliminar={eliminarGrupo} grupoSeleccionado={grupoActivo?.id ?? null} />
         </div>
 
         {/* Grupos élite */}
         <div>
           <h2 className="text-sm font-medium text-[#e91e8c]/70 uppercase tracking-wider mb-3">Grupos élite</h2>
-          <GruposTabla grupos={elite} onEditar={abrirEditar} onToggle={toggleActivo} onVerAlumnas={abrirPanel} grupoSeleccionado={grupoActivo?.id ?? null} elite />
+          <GruposTabla grupos={elite} onEditar={abrirEditar} onToggle={toggleActivo} onVerAlumnas={abrirPanel} onEliminar={eliminarGrupo} grupoSeleccionado={grupoActivo?.id ?? null} elite />
         </div>
       </div>
 
@@ -365,11 +378,12 @@ export default function GruposClient({ grupos: inicial, escuelaId }: { grupos: G
   )
 }
 
-function GruposTabla({ grupos, onEditar, onToggle, onVerAlumnas, grupoSeleccionado, elite }: {
+function GruposTabla({ grupos, onEditar, onToggle, onVerAlumnas, onEliminar, grupoSeleccionado, elite }: {
   grupos: Grupo[]
   onEditar: (g: Grupo) => void
   onToggle: (g: Grupo) => void
   onVerAlumnas: (g: Grupo) => void
+  onEliminar: (g: Grupo) => void
   grupoSeleccionado: string | null
   elite?: boolean
 }) {
@@ -420,6 +434,10 @@ function GruposTabla({ grupos, onEditar, onToggle, onVerAlumnas, grupoSelecciona
                 <button onClick={() => onEditar(g)}
                   className="text-xs text-white/40 hover:text-white transition-colors px-2 py-1 rounded hover:bg-white/5">
                   Editar
+                </button>
+                <button onClick={() => onEliminar(g)}
+                  className="text-xs text-white/40 hover:text-red-400 transition-colors px-2 py-1 rounded hover:bg-red-500/10">
+                  Eliminar
                 </button>
               </td>
             </tr>
