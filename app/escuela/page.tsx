@@ -15,6 +15,7 @@ export default async function EscuelaDashboard() {
     { count: totalFamilias },
     { count: totalAlumnas },
     { count: totalProfesores },
+    { count: totalClases },
     { data: escuela },
     { data: configPagos },
   ] = await Promise.all([
@@ -22,13 +23,14 @@ export default async function EscuelaDashboard() {
     supabase.from('familias').select('*', { count: 'exact', head: true }).eq('escuela_id', escuelaId),
     supabase.from('alumnas').select('*', { count: 'exact', head: true }).eq('escuela_id', escuelaId),
     supabase.from('profesores').select('*', { count: 'exact', head: true }).eq('escuela_id', escuelaId).eq('activa', true),
+    supabase.from('horarios').select('*', { count: 'exact', head: true }).eq('escuela_id', escuelaId),
     supabase.from('escuelas').select('id, nombre, info_pago').eq('id', escuelaId).single(),
     service.from('config_pagos').select('wompi_pub_key').eq('escuela_id', escuelaId).maybeSingle(),
   ])
 
   return (
     <DashboardClient
-      stats={{ grupos: totalGrupos ?? 0, familias: totalFamilias ?? 0, alumnas: totalAlumnas ?? 0, profesores: totalProfesores ?? 0 }}
+      stats={{ grupos: totalGrupos ?? 0, familias: totalFamilias ?? 0, alumnas: totalAlumnas ?? 0, profesores: totalProfesores ?? 0, clases: totalClases ?? 0 }}
       escuela={escuela as any}
       tieneWompi={!!configPagos?.wompi_pub_key}
     />
