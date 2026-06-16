@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { NextRequest, NextResponse } from 'next/server'
 
 async function getEscuelaId(supabase: any, userId: string) {
@@ -38,6 +39,33 @@ export async function POST(request: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
   return NextResponse.json({ profesor: data })
+}
+
+export async function DELETE(request: NextRequest) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  const escuelaId = await getEscuelaId(supabase, user.id)
+  if (!escuelaId) return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
+
+  const { id } = await request.json()
+  if (!id) return NextResponse.json({ error: 'Falta id' }, { status: 400 })
+
+  const { data: profesor } = await supabase.from('profesores')
+    .select('user_id').eq('id', id).eq('escuela_id', escuelaId).single()
+  if (!profesor) return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
+
+  if (profesor.user_id) {
+    const service = createServiceClient()
+    await service.auth.admin.deleteUser(profesor.user_id)
+  }
+
+  await supabase.from('grupo_profesor').delete().eq('profesor_id', id)
+  await supabase.from('actividad_profesor').delete().eq('profesor_id', id)
+  const { error } = await supabase.from('profesores').delete().eq('id', id).eq('escuela_id', escuelaId)
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+  return NextResponse.json({ ok: true })
 }
 
 export async function PATCH(request: NextRequest) {

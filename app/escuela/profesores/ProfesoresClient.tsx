@@ -58,6 +58,22 @@ export default function ProfesoresClient({ profesores: inicial, grupos, activida
     cerrar(); setLoading(false)
   }
 
+  async function eliminarProfesor(p: Profesor) {
+    if (!confirm(`¿Eliminar a ${p.nombre}? Esta acción no se puede deshacer.`)) return
+    const res = await fetch('/api/escuela/profesores', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: p.id }),
+    })
+    if (res.ok) {
+      setProfesores(profesores.filter(x => x.id !== p.id))
+      if (seleccionado?.id === p.id) setSeleccionado(null)
+    } else {
+      const data = await res.json()
+      alert(data.error ?? 'No se pudo eliminar')
+    }
+  }
+
   async function toggleActiva(p: Profesor) {
     const res = await fetch('/api/escuela/profesores', {
       method: 'PATCH',
@@ -192,6 +208,10 @@ export default function ProfesoresClient({ profesores: inicial, grupos, activida
                           className="text-xs text-white/40 hover:text-white transition-colors px-2 py-1 rounded hover:bg-white/5">
                           Editar
                         </button>
+                        <button onClick={() => eliminarProfesor(p)}
+                          className="text-xs text-white/40 hover:text-red-400 transition-colors px-2 py-1 rounded hover:bg-red-500/10">
+                          Eliminar
+                        </button>
                       </td>
                     </tr>
                   )
@@ -217,6 +237,10 @@ export default function ProfesoresClient({ profesores: inicial, grupos, activida
                 <button onClick={() => toggleActiva(seleccionado)}
                   className={`text-xs px-2 py-1 rounded-lg transition-colors ${seleccionado.activa ? 'bg-white/5 text-white/50 hover:text-white' : 'bg-green-500/10 text-green-400'}`}>
                   {seleccionado.activa ? 'Desactivar' : 'Activar'}
+                </button>
+                <button onClick={() => eliminarProfesor(seleccionado)}
+                  className="text-xs px-2 py-1 rounded-lg transition-colors bg-red-500/10 text-red-400 hover:bg-red-500/20">
+                  Eliminar
                 </button>
                 <button onClick={() => setSeleccionado(null)}
                   className="text-white/40 hover:text-white text-xs px-2 py-1.5 rounded-lg hover:bg-white/5 transition-colors">✕</button>
