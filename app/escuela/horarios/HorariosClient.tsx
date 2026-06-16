@@ -42,6 +42,7 @@ export default function HorariosClient({ horarios: inicial, grupos, actividades,
   const [form, setForm] = useState(EMPTY)
   const [editId, setEditId] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [vista, setVista] = useState<'lista' | 'disponibilidad'>('lista')
 
   const supabase = createClient()
 
@@ -108,10 +109,20 @@ export default function HorariosClient({ horarios: inicial, grupos, actividades,
           <h1 className="text-2xl font-bold text-white">Horarios</h1>
           <p className="text-white/40 text-sm mt-0.5">{horarios.length} clases programadas</p>
         </div>
-        <button onClick={abrirCrear}
-          className="bg-[#e91e8c] hover:bg-[#ff3da8] text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
-          + Nueva clase
-        </button>
+        <div className="flex items-center gap-2">
+          <div className="flex gap-1 bg-white/5 border border-white/10 rounded-lg p-1">
+            {([['lista', 'Lista'], ['disponibilidad', 'Disponibilidad']] as const).map(([v, label]) => (
+              <button key={v} onClick={() => setVista(v)}
+                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${vista === v ? 'bg-[#e91e8c] text-white' : 'text-white/50 hover:text-white'}`}>
+                {label}
+              </button>
+            ))}
+          </div>
+          <button onClick={abrirCrear}
+            className="bg-[#e91e8c] hover:bg-[#ff3da8] text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
+            + Nueva clase
+          </button>
+        </div>
       </div>
 
       {modal && (
@@ -210,7 +221,9 @@ export default function HorariosClient({ horarios: inicial, grupos, actividades,
         </div>
       )}
 
-      {horarios.length === 0 ? (
+      {vista === 'disponibilidad' ? (
+        <Disponibilidad horarios={horarios} getNombre={getNombre} />
+      ) : horarios.length === 0 ? (
         <div className="bg-white/5 border border-white/10 rounded-xl px-4 py-12 text-center text-white/30 text-sm">
           No hay clases programadas aún
         </div>
@@ -257,6 +270,67 @@ export default function HorariosClient({ horarios: inicial, grupos, actividades,
           ))}
         </div>
       )}
+    </div>
+  )
+}
+
+const HORAS = Array.from({ length: 14 }, (_, i) => i + 7) // 7am a 8pm
+const SALONES_DEFAULT = ['Salón A', 'Salón B']
+
+function horaEnRango(hora: number, h: Horario) {
+  const inicio = parseInt(h.hora_inicio.slice(0, 2))
+  const fin = parseInt(h.hora_fin.slice(0, 2))
+  return hora >= inicio && hora < fin
+}
+
+function Disponibilidad({ horarios, getNombre }: { horarios: Horario[]; getNombre: (h: Horario) => string }) {
+  const salonesUsados = [...new Set(horarios.map(h => h.salon).filter((s): s is string => !!s))]
+  const salones = [...new Set([...SALONES_DEFAULT, ...salonesUsados])]
+  const sinSalon = horarios.filter(h => !h.salon)
+
+  return (
+    <div className="space-y-6">
+      <p className="text-white/40 text-xs">
+        Celdas vacías = horario libre. {sinSalon.length > 0 && `${sinSalon.length} clase${sinSalon.length !== 1 ? 's' : ''} sin salón asignado (columna "Sin asignar").`}
+      </p>
+      {DIAS.slice(1, 7).map((dia, idx) => {
+        const diaNum = idx + 1
+        const hsDelDia = horarios.filter(h => h.dia_semana === diaNum)
+        if (hsDelDia.length === 0) return null
+        const columnas = [...salones, 'Sin asignar']
+        return (
+          <div key={diaNum}>
+            <h2 className="text-xs font-medium text-white/40 uppercase tracking-wider mb-2">{dia}</h2>
+            <div className="bg-white/5 border border-white/10 rounded-xl overflow-hidden overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-white/10">
+                    <th className="text-left text-white/40 px-3 py-2 w-16">Hora</th>
+                    {columnas.map(s => (
+                      <th key={s} className="text-left text-white/40 px-3 py-2">{s}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {HORAS.map(hora => (
+                    <tr key={hora} className="border-b border-white/5">
+                      <td className="px-3 py-2 text-white/30 font-mono">{String(hora).padStart(2, '0')}:00</td>
+                      {columnas.map(col => {
+                        const ocupado = hsDelDia.find(h => horaEnRango(hora, h) && (col === 'Sin asignar' ? !h.salon : h.salon === col))
+                        return (
+                          <td key={col} className={`px-3 py-2 ${ocupado ? 'bg-[#e91e8c]/15 text-[#e91e8c]' : 'text-white/15'}`}>
+                            {ocupado ? getNombre(ocupado) : 'Libre'}
+                          </td>
+                        )
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )
+      })}
     </div>
   )
 }
