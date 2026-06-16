@@ -55,6 +55,18 @@ export default function ActividadesClient({ actividades: inicial, escuelaId }: {
     setActividades(actividades.map(x => x.id === a.id ? { ...x, activa: !a.activa } : x))
   }
 
+  async function eliminarActividad(a: Actividad) {
+    if (!confirm(`¿Eliminar la actividad "${a.nombre}"? Esta acción no se puede deshacer.`)) return
+    const { error } = await supabase.from('horarios').delete().eq('actividad_id', a.id)
+    if (error) { alert('No se pudo eliminar la actividad: ' + error.message); return }
+    const { error: errorAct } = await supabase.from('actividades_extra').delete().eq('id', a.id)
+    if (errorAct) {
+      alert('No se pudo eliminar: la actividad tiene alumnas asignadas o historial. Desactívala en su lugar.')
+      return
+    }
+    setActividades(actividades.filter(x => x.id !== a.id))
+  }
+
   const activas = actividades.filter(a => a.activa)
   const inactivas = actividades.filter(a => !a.activa)
 
@@ -163,6 +175,10 @@ export default function ActividadesClient({ actividades: inicial, escuelaId }: {
                     <button onClick={() => abrirEditar(a)}
                       className="text-xs text-white/40 hover:text-white transition-colors px-2 py-1 rounded hover:bg-white/5">
                       Editar
+                    </button>
+                    <button onClick={() => eliminarActividad(a)}
+                      className="text-xs text-white/40 hover:text-red-400 transition-colors px-2 py-1 rounded hover:bg-red-500/10">
+                      Eliminar
                     </button>
                   </td>
                 </tr>
