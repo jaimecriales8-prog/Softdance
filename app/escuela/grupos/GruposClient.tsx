@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 
 type Grupo = {
@@ -295,6 +296,10 @@ export default function GruposClient({ grupos: inicial, escuelaId }: { grupos: G
                 <p className="text-xs text-white/40 mt-0.5">{alumnas.length} alumna{alumnas.length !== 1 ? 's' : ''}</p>
               </div>
               <div className="flex gap-2">
+                <Link href="/escuela/horarios"
+                  className="text-white/40 hover:text-white text-xs px-3 py-1.5 rounded-lg hover:bg-white/5 transition-colors border border-white/10">
+                  Horarios
+                </Link>
                 {!agregando && (
                   <button onClick={cargarDisponibles}
                     className="bg-[#e91e8c] hover:bg-[#ff3da8] text-white text-xs px-3 py-1.5 rounded-lg transition-colors">
