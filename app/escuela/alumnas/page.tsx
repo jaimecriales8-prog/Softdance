@@ -24,5 +24,5 @@ export default async function AlumnasPage() {
     .eq('escuela_id', escuelaId)
     .order('nombre')
 
-  return <AlumnasClient alumnas={alumnas ?? []} grupos={grupos ?? []} />
+  return <AlumnasClient alumnas={(alumnas ?? []) as any} grupos={grupos ?? []} />
 }
