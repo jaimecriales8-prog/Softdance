@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
 
   const { data: alumnas, error } = await service
     .from('alumnas')
-    .select('id, nombre, codigo_vinculacion, familia_id')
+    .select('id, nombre, codigo_vinculacion, familia_id, escuela_id, escuelas(nombre)')
     .in('codigo_vinculacion', codigosLimpios)
 
   if (error) return NextResponse.json({ error: 'Error al verificar' }, { status: 500 })
@@ -46,7 +46,19 @@ export async function POST(request: NextRequest) {
     )
   }
 
+  // Verificar que todos los códigos sean de la misma escuela
+  const escuelas = [...new Set(encontrados.map(a => a.escuela_id))]
+  if (escuelas.length > 1) {
+    return NextResponse.json(
+      { error: 'Los códigos pertenecen a escuelas distintas. Verifica que sean correctos.' },
+      { status: 400 }
+    )
+  }
+
+  const nombreEscuela = (encontrados[0] as any).escuelas?.nombre ?? ''
+
   return NextResponse.json({
+    escuela: nombreEscuela,
     alumnas: encontrados.map(a => ({ nombre: a.nombre, codigo: a.codigo_vinculacion }))
   })
 }

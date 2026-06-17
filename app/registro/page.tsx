@@ -13,6 +13,7 @@ export default function RegistroPage() {
   const [cargando, setCargando] = useState(false)
   const [error, setError] = useState('')
   const [alumnasPrevisualizadas, setAlumnasPrevisualizadas] = useState<{ nombre: string; codigo: string }[] | null>(null)
+  const [escuelaVerificada, setEscuelaVerificada] = useState<string | null>(null)
   const [verificando, setVerificando] = useState(false)
 
   const codigosValidos = codigos.filter(c => c.trim().length > 0)
@@ -22,6 +23,7 @@ export default function RegistroPage() {
     setVerificando(true)
     setError('')
     setAlumnasPrevisualizadas(null)
+    setEscuelaVerificada(null)
     try {
       const res = await fetch('/api/auth/registro/verificar', {
         method: 'POST',
@@ -31,6 +33,7 @@ export default function RegistroPage() {
       const data = await res.json()
       if (!res.ok) { setError(data.error); return }
       setAlumnasPrevisualizadas(data.alumnas)
+      setEscuelaVerificada(data.escuela)
     } finally {
       setVerificando(false)
     }
@@ -102,16 +105,24 @@ export default function RegistroPage() {
 
             {/* Previsualización alumnas */}
             {alumnasPrevisualizadas && (
-              <div className="mt-3 bg-green-500/10 border border-green-500/20 rounded-lg p-3 space-y-1">
-                <p className="text-xs text-green-400 font-medium mb-2">Alumnas encontradas:</p>
-                {alumnasPrevisualizadas.map(a => (
-                  <div key={a.codigo} className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-full bg-[#e91e8c]/20 flex items-center justify-center text-[#e91e8c] text-xs font-bold">
-                      {a.nombre.charAt(0)}
-                    </div>
-                    <span className="text-white text-sm">{a.nombre}</span>
+              <div className="mt-3 bg-green-500/10 border border-green-500/20 rounded-lg p-3">
+                {escuelaVerificada && (
+                  <div className="flex items-center gap-2 mb-3 pb-2 border-b border-green-500/20">
+                    <span className="text-green-400 text-xs">◉</span>
+                    <p className="text-xs text-green-300 font-semibold">{escuelaVerificada}</p>
                   </div>
-                ))}
+                )}
+                <p className="text-xs text-green-400 font-medium mb-2">Alumnas encontradas:</p>
+                <div className="space-y-1">
+                  {alumnasPrevisualizadas.map(a => (
+                    <div key={a.codigo} className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-full bg-[#e91e8c]/20 flex items-center justify-center text-[#e91e8c] text-xs font-bold">
+                        {a.nombre.charAt(0)}
+                      </div>
+                      <span className="text-white text-sm">{a.nombre}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
