@@ -82,7 +82,7 @@ export default function RegistroPage() {
           <p className="text-white/40 text-sm">Ingresa el código que te dio la escuela</p>
         </div>
 
-        <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
+        <div className="bg-white/8 border border-white/20 rounded-2xl overflow-hidden">
 
           {/* PASO 1: Códigos */}
           <div className={`p-5 ${verificado ? 'border-b border-white/10' : ''}`}>
@@ -105,7 +105,7 @@ export default function RegistroPage() {
                       setCodigos(nuevos)
                     }}
                     placeholder={i === 0 ? 'Ej: SD-7KM2P' : `Código hija ${i + 1} (opcional)`}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-white/20 font-mono focus:outline-none focus:border-[#e91e8c]"
+                    className="w-full bg-white/8 border border-white/20 rounded-xl px-4 py-3 text-sm text-white placeholder-white/40 font-mono focus:outline-none focus:border-[#e91e8c]"
                   />
                 ))}
 
@@ -157,19 +157,19 @@ export default function RegistroPage() {
               </div>
 
               <div>
-                <label className="block text-xs text-white/40 mb-1.5">Correo electrónico</label>
+                <label className="block text-xs text-white/60 mb-1.5">Correo electrónico</label>
                 <input
                   type="email"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
                   required
                   placeholder="tu@correo.com"
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-white/20 focus:outline-none focus:border-[#e91e8c]"
+                  className="w-full bg-white/8 border border-white/20 rounded-xl px-4 py-3 text-sm text-white placeholder-white/40 focus:outline-none focus:border-[#e91e8c]"
                 />
               </div>
 
               <div>
-                <label className="block text-xs text-white/40 mb-1.5">Contraseña</label>
+                <label className="block text-xs text-white/60 mb-1.5">Contraseña</label>
                 <input
                   type="password"
                   value={password}
@@ -177,19 +177,19 @@ export default function RegistroPage() {
                   required
                   minLength={6}
                   placeholder="Mínimo 6 caracteres"
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-white/20 focus:outline-none focus:border-[#e91e8c]"
+                  className="w-full bg-white/8 border border-white/20 rounded-xl px-4 py-3 text-sm text-white placeholder-white/40 focus:outline-none focus:border-[#e91e8c]"
                 />
               </div>
 
               <div>
-                <label className="block text-xs text-white/40 mb-1.5">Confirmar contraseña</label>
+                <label className="block text-xs text-white/60 mb-1.5">Confirmar contraseña</label>
                 <input
                   type="password"
                   value={confirmPassword}
                   onChange={e => setConfirmPassword(e.target.value)}
                   required
                   placeholder="Repite la contraseña"
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-white/20 focus:outline-none focus:border-[#e91e8c]"
+                  className="w-full bg-white/8 border border-white/20 rounded-xl px-4 py-3 text-sm text-white placeholder-white/40 focus:outline-none focus:border-[#e91e8c]"
                 />
               </div>
 
