@@ -77,7 +77,7 @@ export default function HomePage() {
           <span className="text-xl font-bold tracking-tight">
             Soft<span className="text-[#e91e8c]">dance</span>
           </span>
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-3">
             <a href="#features" className="text-sm text-white/60 hover:text-white transition-colors hidden sm:block">
               Funciones
             </a>
@@ -85,8 +85,12 @@ export default function HomePage() {
               Precios
             </a>
             <Link href="/login"
-              className="bg-[#e91e8c] hover:bg-[#ff3da8] text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
+              className="text-sm text-white/60 hover:text-white transition-colors px-3 py-2">
               Iniciar sesión
+            </Link>
+            <Link href="/registro"
+              className="bg-[#e91e8c] hover:bg-[#ff3da8] text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
+              Crear cuenta
             </Link>
           </div>
         </div>
@@ -113,10 +117,10 @@ export default function HomePage() {
           </p>
 
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <a href="#precios"
+            <Link href="/registro"
               className="bg-[#e91e8c] hover:bg-[#ff3da8] text-white font-medium px-8 py-3.5 rounded-xl text-sm transition-colors">
-              Ver planes
-            </a>
+              Crear mi cuenta
+            </Link>
             <Link href="/login"
               className="border border-white/10 hover:bg-white/5 text-white/70 hover:text-white font-medium px-8 py-3.5 rounded-xl text-sm transition-colors">
               Ingresar a mi cuenta
