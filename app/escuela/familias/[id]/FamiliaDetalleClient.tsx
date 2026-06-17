@@ -15,6 +15,7 @@ type EventoAlumnaRef = { evento_id: string; alumna_id: string; id: string }
 type Alumna = {
   id: string; nombre: string; documento: string | null; fecha_nacimiento: string | null
   foto_url: string | null; activa: boolean; congelada: boolean; notas: string | null
+  codigo_vinculacion: string | null
   alumna_grupo: AlumnaGrupo[]
   alumna_actividad?: AlumnaActividad[]
 }
@@ -570,6 +571,22 @@ export default function FamiliaDetalleClient({
                     </button>
                   </div>
                 </div>
+
+                {/* Código de vinculación */}
+                {a.codigo_vinculacion && (
+                  <div className="px-5 pb-2 ml-12 flex items-center gap-2">
+                    <span className="text-white/30 text-xs">Código:</span>
+                    <span className="font-mono text-xs font-bold text-[#e91e8c] bg-[#e91e8c]/10 px-2 py-0.5 rounded select-all">
+                      {a.codigo_vinculacion}
+                    </span>
+                    <button
+                      onClick={() => navigator.clipboard.writeText(a.codigo_vinculacion!)}
+                      className="text-white/30 hover:text-white text-xs transition-colors"
+                      title="Copiar código">
+                      Copiar
+                    </button>
+                  </div>
+                )}
 
                 {/* Notas */}
                 {a.notas && <p className="text-white/30 text-xs px-5 pb-3 ml-12">{a.notas}</p>}

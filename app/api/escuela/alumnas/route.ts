@@ -7,6 +7,22 @@ async function getEscuelaId(supabase: any, userId: string) {
   return data.escuela_id
 }
 
+function generarCodigo(): string {
+  const chars = 'BCDFGHJKLMNPQRSTVWXYZ23456789'
+  let code = 'SD-'
+  for (let i = 0; i < 5; i++) code += chars[Math.floor(Math.random() * chars.length)]
+  return code
+}
+
+async function codigoUnico(supabase: any, escuelaId: string): Promise<string> {
+  for (let i = 0; i < 10; i++) {
+    const codigo = generarCodigo()
+    const { data } = await supabase.from('alumnas').select('id').eq('codigo_vinculacion', codigo).maybeSingle()
+    if (!data) return codigo
+  }
+  throw new Error('No se pudo generar código único')
+}
+
 export async function POST(request: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -18,6 +34,8 @@ export async function POST(request: NextRequest) {
   const { nombre, documento, fecha_nacimiento, notas, grupo_id, familia_id } = await request.json()
   if (!nombre || !familia_id) return NextResponse.json({ error: 'Faltan campos requeridos' }, { status: 400 })
 
+  const codigo_vinculacion = await codigoUnico(supabase, escuelaId)
+
   const { data: alumna, error } = await supabase.from('alumnas').insert({
     escuela_id: escuelaId,
     familia_id,
@@ -26,6 +44,7 @@ export async function POST(request: NextRequest) {
     fecha_nacimiento: fecha_nacimiento || null,
     notas: notas || null,
     activa: true,
+    codigo_vinculacion,
   }).select().single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
@@ -44,7 +63,7 @@ export async function POST(request: NextRequest) {
   // Cargar alumna con grupos
   const { data: alumnaCompleta } = await supabase
     .from('alumnas')
-    .select(`id, nombre, fecha_nacimiento, foto_url, activa, notas,
+    .select(`id, nombre, fecha_nacimiento, foto_url, activa, notas, codigo_vinculacion,
       alumna_grupo(id, fecha_inicio, fecha_fin, activo, grupos(id, nombre, es_elite))`)
     .eq('id', alumna.id)
     .single()

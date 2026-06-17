@@ -21,7 +21,7 @@ export default async function FamiliaDetallePage({ params }: { params: Promise<{
   const { data: alumnas } = await supabase
     .from('alumnas')
     .select(`
-      id, nombre, documento, fecha_nacimiento, foto_url, activa, congelada, notas,
+      id, nombre, documento, fecha_nacimiento, foto_url, activa, congelada, notas, codigo_vinculacion,
       alumna_grupo(id, fecha_inicio, fecha_fin, activo, grupos(id, nombre, es_elite)),
       alumna_actividad(id, actividades_extra(id, nombre, precio, es_recurrente))
     `)
