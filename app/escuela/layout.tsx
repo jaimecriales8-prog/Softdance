@@ -7,6 +7,7 @@ const navItems = [
   { href: '/escuela', label: 'Dashboard', icon: '▦' },
   { href: '/escuela/grupos', label: 'Grupos', icon: '◈' },
   { href: '/escuela/familias', label: 'Familias', icon: '◉' },
+  { href: '/escuela/alumnas', label: 'Alumnas', icon: '◉' },
   { href: '/escuela/horarios', label: 'Horarios', icon: '◷' },
   { href: '/escuela/actividades', label: 'Actividades extra', icon: '◆' },
   { href: '/escuela/profesores', label: 'Profesores', icon: '◉' },
