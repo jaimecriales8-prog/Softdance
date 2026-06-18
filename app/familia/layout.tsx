@@ -1,16 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
 import { ReactNode } from 'react'
-
-const navItems = [
-  { href: '/familia', label: 'Inicio', icon: '▦' },
-  { href: '/familia/horarios', label: 'Horarios', icon: '◷' },
-  { href: '/familia/mensualidades', label: 'Mensualidades', icon: '◎' },
-  { href: '/familia/comunicados', label: 'Comunicados', icon: '◉' },
-  { href: '/familia/eventos', label: 'Eventos', icon: '◈' },
-  { href: '/familia/recibo', label: 'Mi estado de cuenta', icon: '◎' },
-]
+import FamiliaLayoutClient from './FamiliaLayoutClient'
 
 export default async function FamiliaLayout({ children }: { children: ReactNode }) {
   const supabase = await createClient()
@@ -19,7 +10,7 @@ export default async function FamiliaLayout({ children }: { children: ReactNode 
 
   const { data: perfil } = await supabase
     .from('perfiles')
-    .select('nombre, rol, familia_id')
+    .select('rol, familia_id')
     .eq('id', user.id)
     .single()
 
@@ -32,36 +23,8 @@ export default async function FamiliaLayout({ children }: { children: ReactNode 
     .single()
 
   return (
-    <div className="min-h-screen flex bg-black text-white">
-      <aside className="w-56 flex flex-col border-r border-white/10 bg-black fixed top-0 left-0 h-full">
-        <div className="px-6 py-5 border-b border-white/10">
-          <Link href="/" className="text-xl font-bold tracking-tight text-white hover:opacity-80 transition-opacity">Soft<span className="text-[#e91e8c]">dance</span></Link>
-          <p className="text-xs text-white/40 mt-0.5 truncate">{familia?.nombre ?? 'Mi familia'}</p>
-        </div>
-
-        <nav className="flex-1 px-3 py-4 space-y-1">
-          {navItems.map(item => (
-            <Link key={item.href} href={item.href}
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors">
-              <span className="text-base">{item.icon}</span>
-              {item.label}
-            </Link>
-          ))}
-        </nav>
-
-        <div className="px-4 py-4 border-t border-white/10">
-          <p className="text-xs text-white/40 truncate">{perfil?.nombre}</p>
-          <form action="/auth/logout" method="post">
-            <button className="text-xs text-[#e91e8c] hover:text-[#ff3da8] mt-1 transition-colors">
-              Cerrar sesión
-            </button>
-          </form>
-        </div>
-      </aside>
-
-      <main className="flex-1 ml-56 p-8">
-        {children}
-      </main>
-    </div>
+    <FamiliaLayoutClient nombreFamilia={familia?.nombre ?? ''}>
+      {children}
+    </FamiliaLayoutClient>
   )
 }
