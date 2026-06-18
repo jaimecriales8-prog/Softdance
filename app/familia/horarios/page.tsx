@@ -7,6 +7,20 @@ export default async function FamiliaHorariosPage() {
   const { data: { user } } = await supabase.auth.getUser()
   const { data: perfil } = await supabase.from('perfiles').select('familia_id, escuela_id').eq('id', user!.id).single()
 
+  const { data: familia } = await supabase
+    .from('familias')
+    .select('ics_token')
+    .eq('id', perfil!.familia_id)
+    .single()
+
+  // Generar token si no existe aún
+  let icsToken = familia?.ics_token
+  if (!icsToken) {
+    const token = crypto.randomUUID().replace(/-/g, '')
+    await supabase.from('familias').update({ ics_token: token }).eq('id', perfil!.familia_id)
+    icsToken = token
+  }
+
   // Obtener grupos activos de las alumnas de esta familia
   const { data: alumnas } = await supabase
     .from('alumnas')
@@ -57,11 +71,11 @@ export default async function FamiliaHorariosPage() {
         </div>
         {hayHorarios && (
           <div className="flex gap-2">
-            <a href="webcal://softdance.grialtech.co/api/familia/horarios/ics"
+            <a href={`webcal://softdance.grialtech.co/api/familia/horarios/ics?token=${icsToken}`}
               className="flex items-center gap-2 bg-[#e91e8c]/10 text-[#e91e8c] hover:bg-[#e91e8c]/20 text-xs px-3 py-2 rounded-lg transition-colors">
               <span>📅</span> Suscribirse al calendario
             </a>
-            <a href="/api/familia/horarios/ics" download="horarios.ics"
+            <a href={`/api/familia/horarios/ics?token=${icsToken}`} download="horarios.ics"
               className="flex items-center gap-2 border border-white/10 text-white/60 hover:text-white hover:border-white/20 text-xs px-3 py-2 rounded-lg transition-colors">
               Descargar .ics
             </a>

@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
-import { NextResponse } from 'next/server'
+import { createServiceClient } from '@/lib/supabase/service'
+import { NextRequest, NextResponse } from 'next/server'
 
 const BYDAY: Record<number, string> = { 1: 'MO', 2: 'TU', 3: 'WE', 4: 'TH', 5: 'FR', 6: 'SA', 7: 'SU' }
 
@@ -25,13 +26,37 @@ function uid(): string {
   return Math.random().toString(36).substring(2) + '@softdance'
 }
 
-export async function GET() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+export async function GET(request: NextRequest) {
+  const token = request.nextUrl.searchParams.get('token')
 
-  const { data: perfil } = await supabase.from('perfiles').select('familia_id, escuela_id').eq('id', user.id).single()
-  if (!perfil?.familia_id) return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
+  let familiaId: string
+  let escuelaId: string
+
+  if (token) {
+    // Acceso sin sesión via token (suscripción de calendario iOS/Google)
+    const service = createServiceClient()
+    const { data: familia } = await service
+      .from('familias')
+      .select('id, escuela_id')
+      .eq('ics_token', token)
+      .single()
+    if (!familia) return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
+    familiaId = familia.id
+    escuelaId = familia.escuela_id
+  } else {
+    // Acceso con sesión normal
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    const { data: perfil } = await supabase.from('perfiles').select('familia_id, escuela_id').eq('id', user.id).single()
+    if (!perfil?.familia_id) return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
+    familiaId = perfil.familia_id
+    escuelaId = perfil.escuela_id
+  }
+
+  const supabase = token ? createServiceClient() : await createClient()
+  // Override perfil refs with resolved ids
+  const perfil = { familia_id: familiaId, escuela_id: escuelaId }
 
   const { data: escuela } = await supabase.from('escuelas').select('nombre').eq('id', perfil.escuela_id).single()
 
