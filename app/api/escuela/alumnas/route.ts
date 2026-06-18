@@ -79,12 +79,19 @@ export async function PATCH(request: NextRequest) {
   const escuelaId = await getEscuelaId(supabase, user.id)
   if (!escuelaId) return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
 
-  const { id, nombre, documento, fecha_nacimiento, notas } = await request.json()
+  const { id, nombre, documento, fecha_nacimiento, notas, activa } = await request.json()
   if (!id) return NextResponse.json({ error: 'Falta el id' }, { status: 400 })
+
+  const updates: Record<string, any> = {}
+  if (nombre !== undefined) updates.nombre = nombre
+  if (documento !== undefined) updates.documento = documento || null
+  if (fecha_nacimiento !== undefined) updates.fecha_nacimiento = fecha_nacimiento || null
+  if (notas !== undefined) updates.notas = notas || null
+  if (activa !== undefined) updates.activa = activa
 
   const { data: alumna, error } = await supabase
     .from('alumnas')
-    .update({ nombre, documento: documento || null, fecha_nacimiento: fecha_nacimiento || null, notas: notas || null })
+    .update(updates)
     .eq('id', id)
     .eq('escuela_id', escuelaId)
     .select().single()

@@ -39,6 +39,24 @@ export default function AlumnasClient({ alumnas, grupos }: { alumnas: Alumna[]; 
   const [copiado, setCopiado] = useState(false)
   const [lista, setLista] = useState(alumnas)
   const [eliminando, setEliminando] = useState(false)
+  const [toggling, setToggling] = useState(false)
+
+  async function toggleActiva(a: Alumna) {
+    setToggling(true)
+    try {
+      const res = await fetch('/api/escuela/alumnas', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: a.id, activa: !a.activa }),
+      })
+      if (!res.ok) { alert((await res.json()).error ?? 'Error'); return }
+      const actualizada = { ...a, activa: !a.activa }
+      setLista(prev => prev.map(x => x.id === a.id ? actualizada : x))
+      setSeleccionada(actualizada)
+    } finally {
+      setToggling(false)
+    }
+  }
 
   async function eliminarAlumna(a: Alumna) {
     if (!confirm(`¿Eliminar a ${a.nombre}? Esta acción no se puede deshacer.`)) return
@@ -247,6 +265,12 @@ export default function AlumnasClient({ alumnas, grupos }: { alumnas: Alumna[]; 
                 </div>
               </div>
               <div className="flex items-center gap-2">
+                <button
+                  onClick={() => toggleActiva(seleccionada)}
+                  disabled={toggling}
+                  className={`text-xs px-2 py-1 rounded-lg transition-colors disabled:opacity-40 ${seleccionada.activa ? 'text-yellow-400 hover:bg-yellow-400/10' : 'text-green-400 hover:bg-green-400/10'}`}>
+                  {seleccionada.activa ? 'Desactivar' : 'Activar'}
+                </button>
                 <button
                   onClick={() => eliminarAlumna(seleccionada)}
                   disabled={eliminando}
