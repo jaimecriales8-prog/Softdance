@@ -32,12 +32,12 @@ export default async function FamiliaComunicadosPage() {
     <div>
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-white">Comunicados</h1>
-        <p className="text-white/40 text-sm mt-0.5">Avisos de la escuela</p>
+        <p className="text-white/60 text-sm mt-0.5">Avisos de la escuela</p>
       </div>
 
       {(comunicados ?? []).length === 0 ? (
         <div className="bg-white/5 border border-white/10 rounded-xl p-12 text-center">
-          <p className="text-white/30 text-sm">No hay comunicados publicados</p>
+          <p className="text-white/50 text-sm">No hay comunicados publicados</p>
         </div>
       ) : (
         <div className="space-y-4">
@@ -52,7 +52,7 @@ export default async function FamiliaComunicadosPage() {
                   )}
                 </div>
                 <p className="text-white/70 text-sm whitespace-pre-wrap leading-relaxed">{c.cuerpo}</p>
-                <p className="text-white/30 text-xs mt-3">
+                <p className="text-white/50 text-xs mt-3">
                   {fecha.getDate()} de {MESES[fecha.getMonth() + 1]} de {fecha.getFullYear()}
                 </p>
               </div>

@@ -60,7 +60,7 @@ function InfoPagoInline({ info }: { info: string }) {
           <div className="bg-[#111] border border-white/10 rounded-2xl p-6 w-full max-w-sm mx-4" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-base font-semibold text-white">Instrucciones de pago</h2>
-              <button onClick={() => setOpen(false)} className="text-white/40 hover:text-white">✕</button>
+              <button onClick={() => setOpen(false)} className="text-white/60 hover:text-white">✕</button>
             </div>
             <p className="text-sm text-white/70 whitespace-pre-line leading-relaxed">{info}</p>
           </div>
@@ -100,7 +100,7 @@ export default function ReciboFamiliaClient({ familia, escuela, mensualidades, e
       <div className="flex items-center justify-between mb-6 print:hidden">
         <div>
           <h1 className="text-2xl font-bold text-white">Mi estado de cuenta</h1>
-          <p className="text-white/40 text-sm mt-0.5">{escuela.nombre}</p>
+          <p className="text-white/60 text-sm mt-0.5">{escuela.nombre}</p>
         </div>
         <button onClick={() => window.print()}
           className="bg-[#e91e8c] hover:bg-[#ff3da8] text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
@@ -138,7 +138,7 @@ export default function ReciboFamiliaClient({ familia, escuela, mensualidades, e
             { label: 'Eventos pagados', value: totalPagadoEv, color: 'text-green-400' },
           ].map(s => (
             <div key={s.label} className="bg-white/5 border border-white/10 rounded-xl p-4 print:bg-gray-50 print:border-gray-200 print:rounded print:p-3">
-              <p className="text-white/40 text-xs mb-1 print:text-gray-500">{s.label}</p>
+              <p className="text-white/60 text-xs mb-1 print:text-gray-500">{s.label}</p>
               <p className={`text-lg font-bold ${s.color} print:text-black`}>${s.value.toLocaleString('es-CO')}</p>
             </div>
           ))}
@@ -148,16 +148,16 @@ export default function ReciboFamiliaClient({ familia, escuela, mensualidades, e
         <section className="mb-8">
           <h2 className="text-base font-semibold text-white mb-3 print:text-black print:text-lg">Mensualidades</h2>
           {mensualidades.length === 0 ? (
-            <p className="text-white/30 text-sm">Sin mensualidades registradas</p>
+            <p className="text-white/50 text-sm">Sin mensualidades registradas</p>
           ) : (
             <div className="bg-white/5 border border-white/10 rounded-xl overflow-hidden print:bg-white print:border-gray-200">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-white/10 print:border-gray-200 print:bg-gray-50">
-                    <th className="text-left text-white/40 text-xs uppercase tracking-wider px-4 py-2.5 print:text-gray-500">Período</th>
-                    <th className="text-left text-white/40 text-xs uppercase tracking-wider px-4 py-2.5 print:text-gray-500">Detalle</th>
-                    <th className="text-right text-white/40 text-xs uppercase tracking-wider px-4 py-2.5 print:text-gray-500">Total</th>
-                    <th className="text-right text-white/40 text-xs uppercase tracking-wider px-4 py-2.5 print:text-gray-500">Estado</th>
+                    <th className="text-left text-white/60 text-xs uppercase tracking-wider px-4 py-2.5 print:text-gray-500">Período</th>
+                    <th className="text-left text-white/60 text-xs uppercase tracking-wider px-4 py-2.5 print:text-gray-500">Detalle</th>
+                    <th className="text-right text-white/60 text-xs uppercase tracking-wider px-4 py-2.5 print:text-gray-500">Total</th>
+                    <th className="text-right text-white/60 text-xs uppercase tracking-wider px-4 py-2.5 print:text-gray-500">Estado</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -165,14 +165,14 @@ export default function ReciboFamiliaClient({ familia, escuela, mensualidades, e
                     <tr key={m.id} className={i < mensualidades.length - 1 ? 'border-b border-white/5 print:border-gray-100' : ''}>
                       <td className="px-4 py-3">
                         <p className="text-white font-medium print:text-black">{fmtPeriodo(m.periodo)}</p>
-                        {m.fecha_limite && <p className="text-white/40 text-xs print:text-gray-400">Vence {fmtFecha(m.fecha_limite)}</p>}
+                        {m.fecha_limite && <p className="text-white/60 text-xs print:text-gray-400">Vence {fmtFecha(m.fecha_limite)}</p>}
                       </td>
                       <td className="px-4 py-3">
                         {(m.detalle ?? []).map((d: any, di: number) => (
                           <div key={di} className="mb-1">
                             <p className="text-white/60 text-xs font-medium print:text-gray-600">{d.alumna}</p>
                             {d.lineas?.map((l: any, li: number) => (
-                              <p key={li} className="text-white/40 text-xs print:text-gray-400">{l.concepto} — ${Number(l.valor).toLocaleString('es-CO')}</p>
+                              <p key={li} className="text-white/60 text-xs print:text-gray-400">{l.concepto} — ${Number(l.valor).toLocaleString('es-CO')}</p>
                             ))}
                           </div>
                         ))}
@@ -208,9 +208,9 @@ export default function ReciboFamiliaClient({ familia, escuela, mensualidades, e
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-white/10 print:border-gray-200 print:bg-gray-50">
-                    <th className="text-left text-white/40 text-xs uppercase tracking-wider px-4 py-2.5 print:text-gray-500">Año</th>
-                    <th className="text-right text-white/40 text-xs uppercase tracking-wider px-4 py-2.5 print:text-gray-500">Valor</th>
-                    <th className="text-right text-white/40 text-xs uppercase tracking-wider px-4 py-2.5 print:text-gray-500">Estado</th>
+                    <th className="text-left text-white/60 text-xs uppercase tracking-wider px-4 py-2.5 print:text-gray-500">Año</th>
+                    <th className="text-right text-white/60 text-xs uppercase tracking-wider px-4 py-2.5 print:text-gray-500">Valor</th>
+                    <th className="text-right text-white/60 text-xs uppercase tracking-wider px-4 py-2.5 print:text-gray-500">Estado</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -245,10 +245,10 @@ export default function ReciboFamiliaClient({ familia, escuela, mensualidades, e
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-white/10 print:border-gray-200 print:bg-gray-50">
-                    <th className="text-left text-white/40 text-xs uppercase tracking-wider px-4 py-2.5 print:text-gray-500">Evento</th>
-                    <th className="text-left text-white/40 text-xs uppercase tracking-wider px-4 py-2.5 print:text-gray-500">Alumna</th>
-                    <th className="text-right text-white/40 text-xs uppercase tracking-wider px-4 py-2.5 print:text-gray-500">Total</th>
-                    <th className="text-right text-white/40 text-xs uppercase tracking-wider px-4 py-2.5 print:text-gray-500">Estado</th>
+                    <th className="text-left text-white/60 text-xs uppercase tracking-wider px-4 py-2.5 print:text-gray-500">Evento</th>
+                    <th className="text-left text-white/60 text-xs uppercase tracking-wider px-4 py-2.5 print:text-gray-500">Alumna</th>
+                    <th className="text-right text-white/60 text-xs uppercase tracking-wider px-4 py-2.5 print:text-gray-500">Total</th>
+                    <th className="text-right text-white/60 text-xs uppercase tracking-wider px-4 py-2.5 print:text-gray-500">Estado</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -261,7 +261,7 @@ export default function ReciboFamiliaClient({ familia, escuela, mensualidades, e
                       <tr key={ev.id} className={i < eventos.length - 1 ? 'border-b border-white/5 print:border-gray-100' : ''}>
                         <td className="px-4 py-3">
                           <p className="text-white font-medium print:text-black">{ev.eventos.nombre}</p>
-                          {ev.eventos.fecha && <p className="text-white/40 text-xs print:text-gray-400">{fmtFecha(ev.eventos.fecha)}</p>}
+                          {ev.eventos.fecha && <p className="text-white/60 text-xs print:text-gray-400">{fmtFecha(ev.eventos.fecha)}</p>}
                         </td>
                         <td className="px-4 py-3 text-white/60 print:text-gray-600 text-sm">{ev.alumnas.nombre}</td>
                         <td className="px-4 py-3 text-right text-white font-medium print:text-black">${ev.total.toLocaleString('es-CO')}</td>

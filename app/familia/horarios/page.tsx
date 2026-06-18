@@ -53,7 +53,7 @@ export default async function FamiliaHorariosPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-white">Horarios</h1>
-          <p className="text-white/40 text-sm mt-0.5">Clases de tus hijas esta semana</p>
+          <p className="text-white/60 text-sm mt-0.5">Clases de tus hijas esta semana</p>
         </div>
         {hayHorarios && (
           <div className="flex gap-2">
@@ -62,7 +62,7 @@ export default async function FamiliaHorariosPage() {
               <span>📅</span> Suscribirse al calendario
             </a>
             <a href="/api/familia/horarios/ics" download="horarios.ics"
-              className="flex items-center gap-2 border border-white/10 text-white/40 hover:text-white hover:border-white/20 text-xs px-3 py-2 rounded-lg transition-colors">
+              className="flex items-center gap-2 border border-white/10 text-white/60 hover:text-white hover:border-white/20 text-xs px-3 py-2 rounded-lg transition-colors">
               Descargar .ics
             </a>
           </div>
@@ -70,14 +70,14 @@ export default async function FamiliaHorariosPage() {
       </div>
 
       {!hayHorarios ? (
-        <div className="bg-white/5 border border-white/10 rounded-xl px-4 py-12 text-center text-white/30 text-sm">
+        <div className="bg-white/5 border border-white/10 rounded-xl px-4 py-12 text-center text-white/50 text-sm">
           No hay clases programadas aún
         </div>
       ) : (
         <div className="space-y-4">
           {Object.entries(porDia).filter(([, hs]) => hs.length > 0).map(([dia, hs]) => (
             <div key={dia}>
-              <h2 className="text-xs font-medium text-white/40 uppercase tracking-wider mb-2">{DIAS[parseInt(dia)]}</h2>
+              <h2 className="text-xs font-medium text-white/60 uppercase tracking-wider mb-2">{DIAS[parseInt(dia)]}</h2>
               <div className="bg-white/5 border border-white/10 rounded-xl overflow-hidden">
                 <table className="w-full text-sm">
                   <tbody>
@@ -91,11 +91,11 @@ export default async function FamiliaHorariosPage() {
                           </td>
                           <td className="px-4 py-3">
                             <p className="text-white font-medium">{g?.nombre ?? '—'}</p>
-                            {info && <p className="text-white/40 text-xs">{info.alumnas.join(', ')}</p>}
+                            {info && <p className="text-white/60 text-xs">{info.alumnas.join(', ')}</p>}
                             {g?.es_elite && <span className="text-[#e91e8c] text-xs">élite</span>}
                           </td>
-                          <td className="px-4 py-3 text-white/40 text-xs">{h.salon ?? ''}</td>
-                          <td className="px-4 py-3 text-white/40 text-xs">{h.profesora ?? ''}</td>
+                          <td className="px-4 py-3 text-white/60 text-xs">{h.salon ?? ''}</td>
+                          <td className="px-4 py-3 text-white/60 text-xs">{h.profesora ?? ''}</td>
                         </tr>
                       )
                     })}

@@ -57,12 +57,12 @@ export default async function FamiliaEventosPage() {
     <div>
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-white">Eventos</h1>
-        <p className="text-white/40 text-sm mt-0.5">Participación y pagos</p>
+        <p className="text-white/60 text-sm mt-0.5">Participación y pagos</p>
       </div>
 
       {eventos.length === 0 ? (
         <div className="bg-white/5 border border-white/10 rounded-xl p-12 text-center">
-          <p className="text-white/30 text-sm">Ninguna alumna está inscrita en eventos</p>
+          <p className="text-white/50 text-sm">Ninguna alumna está inscrita en eventos</p>
         </div>
       ) : (
         <div className="space-y-6">
@@ -71,7 +71,7 @@ export default async function FamiliaEventosPage() {
               <div className="px-5 py-4 border-b border-white/10">
                 <p className="text-white font-semibold">{ev.nombre}</p>
                 {ev.fecha && (
-                  <p className="text-white/40 text-xs mt-0.5">
+                  <p className="text-white/60 text-xs mt-0.5">
                     {new Date(ev.fecha + 'T12:00:00').toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' })}
                   </p>
                 )}
@@ -94,7 +94,7 @@ export default async function FamiliaEventosPage() {
                           </div>
                           <div>
                             <p className="text-white text-sm font-medium">{p.alumnaNombre}</p>
-                            <p className="text-white/40 text-xs">Total: ${Number(p.total).toLocaleString('es-CO')}</p>
+                            <p className="text-white/60 text-xs">Total: ${Number(p.total).toLocaleString('es-CO')}</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-3 shrink-0">
@@ -125,7 +125,7 @@ export default async function FamiliaEventosPage() {
                         <div className="bg-white/5 rounded-lg p-3 mb-3 space-y-1">
                           {p.lineas.map((l: any, i: number) => (
                             <div key={i} className="flex justify-between text-xs">
-                              <span className="text-white/50">{l.concepto}</span>
+                              <span className="text-white/70">{l.concepto}</span>
                               <span className="text-white/70">${Number(l.valor).toLocaleString('es-CO')}</span>
                             </div>
                           ))}
@@ -137,7 +137,7 @@ export default async function FamiliaEventosPage() {
                         <div className="grid grid-cols-4 gap-2">
                           {p.cuotas.map((c: any) => (
                             <div key={c.numero}
-                              className={`text-center text-xs py-1.5 rounded-lg ${c.estado === 'pagado' ? 'bg-green-500/20 text-green-400' : 'bg-white/5 text-white/30'}`}>
+                              className={`text-center text-xs py-1.5 rounded-lg ${c.estado === 'pagado' ? 'bg-green-500/20 text-green-400' : 'bg-white/5 text-white/50'}`}>
                               Cuota {c.numero}
                             </div>
                           ))}

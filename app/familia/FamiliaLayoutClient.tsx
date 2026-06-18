@@ -51,10 +51,10 @@ export default function FamiliaLayoutClient({ children, nombreFamilia }: { child
             const active = isActive(href, exact)
             return (
               <Link key={href} href={href}
-                className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
-                  active ? 'bg-[#e91e8c] text-white' : 'text-white/50 hover:bg-white/5 hover:text-white'
+                className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors ${
+                  active ? 'bg-[#e91e8c] text-white' : 'text-white/70 hover:bg-white/5 hover:text-white'
                 }`}>
-                <Icon className="h-4 w-4 shrink-0" />
+                <Icon className="h-5 w-5 shrink-0" />
                 {label}
               </Link>
             )
@@ -80,7 +80,7 @@ export default function FamiliaLayoutClient({ children, nombreFamilia }: { child
             </div>
             <div className="min-w-0">
               <p className="text-sm font-bold text-white leading-none">Softdance</p>
-              <p className="text-[11px] text-white/40 mt-0.5 truncate">{nombreFamilia || 'Portal familias'}</p>
+              <p className="text-xs text-white/60 mt-0.5 truncate">{nombreFamilia || 'Portal familias'}</p>
             </div>
           </div>
           <button onClick={logout} aria-label="Cerrar sesión"
@@ -101,10 +101,10 @@ export default function FamiliaLayoutClient({ children, nombreFamilia }: { child
           return (
             <Link key={href} href={href}
               className={`flex flex-col items-center gap-1 py-1 rounded-xl transition-colors ${
-                active ? 'text-[#e91e8c]' : 'text-white/30 hover:text-white/60'
+                active ? 'text-[#e91e8c]' : 'text-white/50 hover:text-white/80'
               }`}>
-              <Icon className="h-5 w-5" />
-              <span className="text-[10px] font-medium">{label}</span>
+              <Icon className="h-6 w-6" />
+              <span className="text-[11px] font-semibold">{label}</span>
             </Link>
           )
         })}

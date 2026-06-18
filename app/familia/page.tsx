@@ -82,7 +82,7 @@ export default async function FamiliaHomePage() {
     <div>
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-white">Inicio</h1>
-        <p className="text-white/40 text-sm mt-0.5">{MESES[mes]} {ahora.getFullYear()}</p>
+        <p className="text-white/60 text-sm mt-0.5">{MESES[mes]} {ahora.getFullYear()}</p>
       </div>
 
       {/* Mensualidad del mes */}
@@ -90,10 +90,10 @@ export default async function FamiliaHomePage() {
         <div className={`border rounded-xl p-5 mb-4 ${mensualidad.estado === 'pagado' ? 'bg-green-500/5 border-green-500/20' : 'bg-[#e91e8c]/5 border-[#e91e8c]/20'}`}>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs text-white/40 uppercase tracking-wider mb-1">Mensualidad {MESES[mes]}</p>
+              <p className="text-xs text-white/60 uppercase tracking-wider mb-1">Mensualidad {MESES[mes]}</p>
               <p className="text-3xl font-bold text-white">${Number(mensualidad.total).toLocaleString('es-CO')}</p>
               {mensualidad.fecha_limite && (
-                <p className="text-xs text-white/40 mt-1">
+                <p className="text-xs text-white/60 mt-1">
                   Vence: {fmtFecha(mensualidad.fecha_limite)}
                 </p>
               )}
@@ -116,7 +116,7 @@ export default async function FamiliaHomePage() {
         </div>
       ) : (
         <div className="bg-white/5 border border-white/10 rounded-xl p-5 mb-4">
-          <p className="text-white/40 text-sm">No hay mensualidad generada para {MESES[mes]}.</p>
+          <p className="text-white/60 text-sm">No hay mensualidad generada para {MESES[mes]}.</p>
         </div>
       )}
 
@@ -137,7 +137,7 @@ export default async function FamiliaHomePage() {
       {/* Eventos pendientes */}
       {(eventosAlumna ?? []).length > 0 && (
         <div className="bg-white/5 border border-white/10 rounded-xl p-4 mb-4">
-          <p className="text-xs text-white/40 uppercase tracking-wider mb-3">Eventos pendientes</p>
+          <p className="text-xs text-white/60 uppercase tracking-wider mb-3">Eventos pendientes</p>
           <div className="space-y-3">
             {(eventosAlumna ?? []).map((ev: any) => {
               const evento = Array.isArray(ev.eventos) ? ev.eventos[0] : ev.eventos
@@ -149,7 +149,7 @@ export default async function FamiliaHomePage() {
                 <div key={ev.id} className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-white font-medium">{evento?.nombre}</p>
-                    <p className="text-xs text-white/40">
+                    <p className="text-xs text-white/60">
                       {alumna?.nombre}
                       {evento?.fecha ? ` · ${fmtFecha(evento.fecha)}` : ''}
                     </p>
@@ -157,7 +157,7 @@ export default async function FamiliaHomePage() {
                   <div className="text-right">
                     <p className="text-sm font-medium text-yellow-400">${Number(ev.total).toLocaleString('es-CO')}</p>
                     {total > 1 && (
-                      <p className="text-xs text-white/30">{pagadas}/{total} cuotas</p>
+                      <p className="text-xs text-white/50">{pagadas}/{total} cuotas</p>
                     )}
                   </div>
                 </div>
@@ -165,14 +165,14 @@ export default async function FamiliaHomePage() {
             })}
           </div>
           <Link href="/familia/eventos"
-            className="block text-center text-xs text-white/40 hover:text-white mt-3 transition-colors">
+            className="block text-center text-xs text-white/60 hover:text-white mt-3 transition-colors">
             Ver todos los eventos →
           </Link>
         </div>
       )}
 
       {/* Alumnas */}
-      <h2 className="text-sm font-medium text-white/50 uppercase tracking-wider mb-3">Mis hijas</h2>
+      <h2 className="text-sm font-medium text-white/70 uppercase tracking-wider mb-3">Mis hijas</h2>
       <div className="grid gap-3">
         {(alumnas ?? []).map((a: any) => {
           const gasActivos = (a.alumna_grupo ?? [])
@@ -195,12 +195,12 @@ export default async function FamiliaHomePage() {
                     <p className="text-white font-medium">{a.nombre}</p>
                     {a.congelada && <span className="text-xs text-blue-400">❄ Congelada</span>}
                   </div>
-                  <p className="text-white/40 text-xs">
+                  <p className="text-white/60 text-xs">
                     {a.fecha_nacimiento ? `${calcularEdad(a.fecha_nacimiento)} años` : 'Sin edad'}
                     {gasActivos.length > 0 && ` · ${gasActivos.map((g: any) => `${g.nombre}${g.es_elite ? ' ⭐' : ''}`).join(' + ')}`}
                   </p>
                   {actsAlumna.length > 0 && (
-                    <p className="text-white/30 text-xs mt-0.5">
+                    <p className="text-white/50 text-xs mt-0.5">
                       {actsAlumna.map((ac: any) => ac.nombre).join(' · ')}
                     </p>
                   )}
@@ -216,12 +216,12 @@ export default async function FamiliaHomePage() {
         <Link href="/familia/horarios"
           className="bg-white/5 border border-white/10 rounded-xl p-4 hover:bg-white/10 transition-colors">
           <p className="text-white font-medium text-sm">Ver horarios</p>
-          <p className="text-white/40 text-xs mt-0.5">Clases de tus hijas</p>
+          <p className="text-white/60 text-xs mt-0.5">Clases de tus hijas</p>
         </Link>
         <Link href="/familia/mensualidades"
           className="bg-white/5 border border-white/10 rounded-xl p-4 hover:bg-white/10 transition-colors">
           <p className="text-white font-medium text-sm">Historial pagos</p>
-          <p className="text-white/40 text-xs mt-0.5">Mensualidades anteriores</p>
+          <p className="text-white/60 text-xs mt-0.5">Mensualidades anteriores</p>
         </Link>
       </div>
     </div>

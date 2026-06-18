@@ -32,13 +32,13 @@ export default async function FamiliaMensualidadesPage() {
     <div>
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-white">Mensualidades</h1>
-        <p className="text-white/40 text-sm mt-0.5">Historial de cobros</p>
+        <p className="text-white/60 text-sm mt-0.5">Historial de cobros</p>
       </div>
 
       {/* Matrículas */}
       {(matriculas ?? []).length > 0 && (
         <div className="mb-6">
-          <h2 className="text-sm font-medium text-white/50 uppercase tracking-wider mb-3">Matrículas</h2>
+          <h2 className="text-sm font-medium text-white/70 uppercase tracking-wider mb-3">Matrículas</h2>
           <div className="space-y-2">
             {(matriculas ?? []).map(m => (
               <div key={m.id} className={`border rounded-xl px-5 py-3 flex items-center justify-between ${m.estado === 'pagado' ? 'bg-white/5 border-white/10' : 'bg-[#e91e8c]/5 border-[#e91e8c]/20'}`}>
@@ -59,9 +59,9 @@ export default async function FamiliaMensualidadesPage() {
         </div>
       )}
 
-      <h2 className="text-sm font-medium text-white/50 uppercase tracking-wider mb-3">Mensualidades</h2>
+      <h2 className="text-sm font-medium text-white/70 uppercase tracking-wider mb-3">Mensualidades</h2>
       {!mensualidades?.length ? (
-        <div className="bg-white/5 border border-white/10 rounded-xl px-4 py-12 text-center text-white/30 text-sm">
+        <div className="bg-white/5 border border-white/10 rounded-xl px-4 py-12 text-center text-white/50 text-sm">
           No hay mensualidades registradas aún
         </div>
       ) : (
@@ -74,7 +74,7 @@ export default async function FamiliaMensualidadesPage() {
                 <div className="px-5 py-4 flex items-center justify-between gap-4">
                   <div className="flex-1">
                     <p className="text-white font-medium">{MESES[mesNum]} {anio}</p>
-                    <p className="text-white/40 text-xs">
+                    <p className="text-white/60 text-xs">
                       {pagado ? 'Pagado' : m.fecha_limite
                         ? `Vence: ${new Date(m.fecha_limite + 'T12:00:00').toLocaleDateString('es-CO', { day: 'numeric', month: 'long' })}`
                         : 'Pendiente'}
@@ -105,7 +105,7 @@ export default async function FamiliaMensualidadesPage() {
                         <div className="space-y-0.5">
                           {d.lineas.map((l: any, j: number) => (
                             <div key={j} className="flex justify-between text-xs">
-                              <span className="text-white/40">{l.concepto}</span>
+                              <span className="text-white/60">{l.concepto}</span>
                               <span className="text-white/70">${Number(l.valor).toLocaleString('es-CO')}</span>
                             </div>
                           ))}
@@ -114,7 +114,7 @@ export default async function FamiliaMensualidadesPage() {
                     ))}
                     {Number(m.descuento) > 0 && (
                       <div className="flex justify-between text-xs border-t border-white/5 pt-2">
-                        <span className="text-white/40">Descuento</span>
+                        <span className="text-white/60">Descuento</span>
                         <span className="text-green-400">-${Number(m.descuento).toLocaleString('es-CO')}</span>
                       </div>
                     )}
