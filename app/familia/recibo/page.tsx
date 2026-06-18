@@ -20,19 +20,27 @@ export default async function FamiliaReciboPage() {
 
   const tieneWompi = !!configPagos?.wompi_pub_key && escuela?.cobro_activo
 
-  const [{ data: mensualidades }, { data: eventos }, { data: matriculas }] = await Promise.all([
+  const alumnaIds = (familia?.alumnas as any[] ?? []).map((a: any) => a.id)
+  const dummyId = '00000000-0000-0000-0000-000000000000'
+
+  const [{ data: mensualidades }, { data: eventos }, { data: matriculas }, { data: actividadesAlumnas }] = await Promise.all([
     supabase.from('mensualidades')
       .select('id, periodo, subtotal, descuento, total, estado, fecha_limite, detalle')
       .eq('familia_id', familiaId)
       .order('periodo', { ascending: false }),
     supabase.from('evento_alumna')
       .select('id, estado, total, cuotas, lineas, eventos(nombre, fecha, num_cuotas), alumnas(nombre)')
-      .in('alumna_id', (familia?.alumnas as any[] ?? []).map((a: any) => a.id))
+      .in('alumna_id', alumnaIds.length > 0 ? alumnaIds : [dummyId])
       .order('created_at', { ascending: false }),
     supabase.from('matriculas')
       .select('id, anio, valor, estado')
       .eq('familia_id', familiaId)
       .order('anio', { ascending: false }),
+    alumnaIds.length > 0
+      ? supabase.from('alumna_actividad')
+          .select('id, alumna_id, actividades_extra(id, nombre, precio, es_recurrente), alumnas(nombre)')
+          .in('alumna_id', alumnaIds)
+      : Promise.resolve({ data: [] as any[], error: null }),
   ])
 
   return (
@@ -42,6 +50,7 @@ export default async function FamiliaReciboPage() {
       mensualidades={(mensualidades ?? []) as any[]}
       eventos={(eventos ?? []) as any[]}
       matriculas={(matriculas ?? []) as any[]}
+      actividadesAlumnas={(actividadesAlumnas ?? []) as any[]}
       tieneWompi={tieneWompi}
       infoPago={escuela?.info_pago ?? null}
     />
