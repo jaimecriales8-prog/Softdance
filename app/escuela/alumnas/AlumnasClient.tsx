@@ -37,10 +37,25 @@ export default function AlumnasClient({ alumnas, grupos }: { alumnas: Alumna[]; 
   const [pagina, setPagina] = useState(1)
   const [seleccionada, setSeleccionada] = useState<Alumna | null>(null)
   const [copiado, setCopiado] = useState(false)
+  const [lista, setLista] = useState(alumnas)
+  const [eliminando, setEliminando] = useState(false)
+
+  async function eliminarAlumna(a: Alumna) {
+    if (!confirm(`¿Eliminar a ${a.nombre}? Esta acción no se puede deshacer.`)) return
+    setEliminando(true)
+    try {
+      const res = await fetch(`/api/escuela/alumnas?id=${a.id}`, { method: 'DELETE' })
+      if (!res.ok) { alert((await res.json()).error ?? 'Error al eliminar'); return }
+      setLista(prev => prev.filter(x => x.id !== a.id))
+      setSeleccionada(null)
+    } finally {
+      setEliminando(false)
+    }
+  }
 
   const filtradas = useMemo(() => {
     const q = busqueda.toLowerCase().trim()
-    return alumnas.filter(a => {
+    return lista.filter(a => {
       if (q) {
         const enNombre = a.nombre.toLowerCase().includes(q)
         const enFamilia = a.familias?.nombre.toLowerCase().includes(q) ?? false
@@ -231,7 +246,15 @@ export default function AlumnasClient({ alumnas, grupos }: { alumnas: Alumna[]; 
                   )}
                 </div>
               </div>
-              <button onClick={() => setSeleccionada(null)} className="text-white/30 hover:text-white text-xl leading-none">×</button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => eliminarAlumna(seleccionada)}
+                  disabled={eliminando}
+                  className="text-xs text-red-400 hover:text-white hover:bg-red-500/20 px-2 py-1 rounded-lg transition-colors disabled:opacity-40">
+                  Eliminar
+                </button>
+                <button onClick={() => setSeleccionada(null)} className="text-white/30 hover:text-white text-xl leading-none">×</button>
+              </div>
             </div>
 
             {/* Estado */}

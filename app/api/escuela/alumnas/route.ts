@@ -93,3 +93,35 @@ export async function PATCH(request: NextRequest) {
 
   return NextResponse.json({ alumna })
 }
+
+export async function DELETE(request: NextRequest) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+
+  const escuelaId = await getEscuelaId(supabase, user.id)
+  if (!escuelaId) return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
+
+  const id = request.nextUrl.searchParams.get('id')
+  if (!id) return NextResponse.json({ error: 'Falta el id' }, { status: 400 })
+
+  // Verificar que pertenece a esta escuela
+  const { data: alumna } = await supabase
+    .from('alumnas')
+    .select('id')
+    .eq('id', id)
+    .eq('escuela_id', escuelaId)
+    .single()
+
+  if (!alumna) return NextResponse.json({ error: 'Alumna no encontrada' }, { status: 404 })
+
+  // Borrar registros dependientes primero
+  await supabase.from('alumna_grupo').delete().eq('alumna_id', id)
+  await supabase.from('alumna_actividad').delete().eq('alumna_id', id)
+  await supabase.from('evento_alumna').delete().eq('alumna_id', id)
+
+  const { error } = await supabase.from('alumnas').delete().eq('id', id).eq('escuela_id', escuelaId)
+  if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+
+  return NextResponse.json({ ok: true })
+}
