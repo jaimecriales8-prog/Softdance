@@ -45,7 +45,7 @@ export default async function FamiliaDetallePage({ params }: { params: Promise<{
   return (
     <FamiliaDetalleClient
       familia={familia}
-      alumnas={alumnas ?? []}
+      alumnas={(alumnas ?? []) as any[]}
       grupos={grupos ?? []}
       actividades={actividades ?? []}
       eventos={eventos ?? []}

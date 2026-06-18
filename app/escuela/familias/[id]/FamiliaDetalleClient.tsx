@@ -15,13 +15,13 @@ type EventoAlumnaRef = { evento_id: string; alumna_id: string; id: string }
 type Alumna = {
   id: string; nombre: string; documento: string | null; fecha_nacimiento: string | null
   foto_url: string | null; activa: boolean; congelada: boolean; notas: string | null
-  codigo_vinculacion: string | null
+  codigo_vinculacion: string | null; descuento_mensual: number | null
   alumna_grupo: AlumnaGrupo[]
   alumna_actividad?: AlumnaActividad[]
 }
 type Familia = { id: string; nombre: string; email: string; telefono: string | null }
 
-const EMPTY_ALUMNA = { nombre: '', documento: '', fecha_nacimiento: '', notas: '', grupo_id: '' }
+const EMPTY_ALUMNA = { nombre: '', documento: '', fecha_nacimiento: '', notas: '', grupo_id: '', descuento_mensual: '' }
 
 function calcularEdad(fecha: string) {
   const hoy = new Date()
@@ -91,6 +91,7 @@ export default function FamiliaDetalleClient({
       fecha_nacimiento: a.fecha_nacimiento ?? '',
       notas: a.notas ?? '',
       grupo_id: grupoActivo(a)?.grupos.id ?? '',
+      descuento_mensual: a.descuento_mensual ? String(a.descuento_mensual) : '',
     })
     setEditId(a.id); setError(''); setModal('editar')
   }
@@ -137,6 +138,7 @@ export default function FamiliaDetalleClient({
         documento: form.documento || null,
         fecha_nacimiento: form.fecha_nacimiento || null,
         notas: form.notas || null,
+        descuento_mensual: form.descuento_mensual ? Number(form.descuento_mensual) : null,
         grupo_id: form.grupo_id || null,
         familia_id: familia.id,
         escuela_id: escuelaId,
@@ -160,6 +162,7 @@ export default function FamiliaDetalleClient({
         documento: form.documento || null,
         fecha_nacimiento: form.fecha_nacimiento || null,
         notas: form.notas || null,
+        descuento_mensual: form.descuento_mensual ? Number(form.descuento_mensual) : null,
         escuela_id: escuelaId,
       }),
     })
@@ -352,6 +355,16 @@ export default function FamiliaDetalleClient({
                   </select>
                 </div>
               )}
+              <div>
+                <label className="block text-xs text-white/50 mb-1">Descuento mensual (fijo en $)</label>
+                <input
+                  type="number" min="0" step="1000"
+                  value={form.descuento_mensual}
+                  onChange={e => setForm({ ...form, descuento_mensual: e.target.value })}
+                  placeholder="0"
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-[#e91e8c]" />
+                <p className="text-white/30 text-xs mt-1">Se descuenta automáticamente en cada mensualidad generada</p>
+              </div>
               <div>
                 <label className="block text-xs text-white/50 mb-1">Notas</label>
                 <textarea value={form.notas} onChange={e => setForm({ ...form, notas: e.target.value })} rows={2}
@@ -590,6 +603,9 @@ export default function FamiliaDetalleClient({
 
                 {/* Notas */}
                 {a.notas && <p className="text-white/30 text-xs px-5 pb-3 ml-12">{a.notas}</p>}
+                {a.descuento_mensual ? (
+                  <p className="text-green-400/70 text-xs px-5 pb-3 ml-12">Descuento mensual: -${Number(a.descuento_mensual).toLocaleString('es-CO')}</p>
+                ) : null}
 
                 {/* Panel eventos */}
                 {alumnaEventoId === a.id && (

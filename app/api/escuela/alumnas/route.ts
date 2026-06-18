@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
   const escuelaId = await getEscuelaId(supabase, user.id)
   if (!escuelaId) return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
 
-  const { nombre, documento, fecha_nacimiento, notas, grupo_id, familia_id } = await request.json()
+  const { nombre, documento, fecha_nacimiento, notas, grupo_id, familia_id, descuento_mensual } = await request.json()
   if (!nombre || !familia_id) return NextResponse.json({ error: 'Faltan campos requeridos' }, { status: 400 })
 
   const codigo_vinculacion = await codigoUnico(supabase, escuelaId)
@@ -45,6 +45,7 @@ export async function POST(request: NextRequest) {
     notas: notas || null,
     activa: true,
     codigo_vinculacion,
+    descuento_mensual: descuento_mensual ? Number(descuento_mensual) : null,
   }).select().single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
@@ -79,7 +80,7 @@ export async function PATCH(request: NextRequest) {
   const escuelaId = await getEscuelaId(supabase, user.id)
   if (!escuelaId) return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
 
-  const { id, nombre, documento, fecha_nacimiento, notas, activa } = await request.json()
+  const { id, nombre, documento, fecha_nacimiento, notas, activa, descuento_mensual } = await request.json()
   if (!id) return NextResponse.json({ error: 'Falta el id' }, { status: 400 })
 
   const updates: Record<string, any> = {}
@@ -88,6 +89,7 @@ export async function PATCH(request: NextRequest) {
   if (fecha_nacimiento !== undefined) updates.fecha_nacimiento = fecha_nacimiento || null
   if (notas !== undefined) updates.notas = notas || null
   if (activa !== undefined) updates.activa = activa
+  if (descuento_mensual !== undefined) updates.descuento_mensual = descuento_mensual === null ? null : Number(descuento_mensual)
 
   const { data: alumna, error } = await supabase
     .from('alumnas')

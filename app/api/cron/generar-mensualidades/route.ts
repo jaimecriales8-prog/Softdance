@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
     const { data: alumnas } = await supabase
       .from('alumnas')
       .select(`
-        id, nombre, familia_id, congelada,
+        id, nombre, familia_id, congelada, descuento_mensual,
         alumna_grupo(activo, grupos(id, nombre, precio_mensual)),
         alumna_actividad(activo, actividades_extra(id, nombre, precio, es_recurrente))
       `)
@@ -93,19 +93,31 @@ export async function GET(request: NextRequest) {
         }
 
         if (lineas.length > 0) {
+          // Descuento fijo por alumna
+          const descuentoAlumna = alumna.descuento_mensual ? Number(alumna.descuento_mensual) : 0
+          if (descuentoAlumna > 0) {
+            lineas.push({ concepto: 'Descuento', valor: -descuentoAlumna })
+          }
           detalle.push({ alumna: alumna.nombre, lineas })
         }
       }
 
       if (subtotal === 0) continue
 
+      // Acumular descuentos de todas las alumnas de esta familia
+      let totalDescuento = 0
+      for (const alumna of alumnasFamilia) {
+        if (alumna.descuento_mensual) totalDescuento += Number(alumna.descuento_mensual)
+      }
+      const totalConDescuento = Math.max(0, subtotal - totalDescuento)
+
       await supabase.from('mensualidades').insert({
         escuela_id: escuela.id,
         familia_id,
         periodo,
         subtotal,
-        descuento: 0,
-        total: subtotal,
+        descuento: totalDescuento,
+        total: totalConDescuento,
         estado: 'pendiente',
         fecha_limite: fechaLimite,
         detalle,
@@ -120,7 +132,7 @@ export async function GET(request: NextRequest) {
           email: familia.email,
           nombreFamilia: familia.nombre,
           periodo,
-          total: subtotal,
+          total: totalConDescuento,
           fechaLimite,
           detalle,
         }).catch(() => {})
