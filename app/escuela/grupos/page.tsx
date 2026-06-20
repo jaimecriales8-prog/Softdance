@@ -8,7 +8,7 @@ export default async function GruposPage() {
 
   const [{ data: grupos }, { data: grupoProfesores }] = await Promise.all([
     supabase.from('grupos').select('*').eq('escuela_id', perfil!.escuela_id).order('es_elite').order('edad_min'),
-    supabase.from('grupo_profesor').select('grupo_id, profesores(id, nombre)').eq('escuela_id', perfil!.escuela_id),
+    supabase.from('grupo_profesor').select('grupo_id, profesores(id, nombre)'),
   ])
 
   // Map grupo_id → profesor nombres
