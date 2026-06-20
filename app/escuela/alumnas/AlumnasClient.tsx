@@ -11,6 +11,7 @@ type Alumna = {
   activa: boolean
   congelada: boolean
   codigo_vinculacion: string | null
+  descuento_mensual: number | null
   familias: { id: string; nombre: string; email: string; telefono: string | null } | null
   alumna_grupo: { activo: boolean; grupos: Grupo }[]
   alumna_actividad: { actividades_extra: { id: string; nombre: string } }[]
@@ -40,6 +41,28 @@ export default function AlumnasClient({ alumnas, grupos }: { alumnas: Alumna[]; 
   const [lista, setLista] = useState(alumnas)
   const [eliminando, setEliminando] = useState(false)
   const [toggling, setToggling] = useState(false)
+  const [editandoDescuento, setEditandoDescuento] = useState(false)
+  const [descuentoInput, setDescuentoInput] = useState('')
+  const [savingDescuento, setSavingDescuento] = useState(false)
+
+  async function guardarDescuento(a: Alumna) {
+    setSavingDescuento(true)
+    try {
+      const valor = descuentoInput === '' ? null : Number(descuentoInput)
+      const res = await fetch('/api/escuela/alumnas', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: a.id, descuento_mensual: valor }),
+      })
+      if (!res.ok) { alert((await res.json()).error ?? 'Error'); return }
+      const actualizada = { ...a, descuento_mensual: valor }
+      setLista(prev => prev.map(x => x.id === a.id ? actualizada : x))
+      setSeleccionada(actualizada)
+      setEditandoDescuento(false)
+    } finally {
+      setSavingDescuento(false)
+    }
+  }
 
   async function toggleActiva(a: Alumna) {
     setToggling(true)
@@ -327,6 +350,50 @@ export default function AlumnasClient({ alumnas, grupos }: { alumnas: Alumna[]; 
                 <div className="bg-amber-400/5 border border-amber-400/20 rounded-lg p-3">
                   <p className="text-amber-400 text-sm font-medium">Sin familia vinculada</p>
                   <p className="text-white/40 text-xs mt-0.5">La familia debe registrarse con el código de vinculación</p>
+                </div>
+              )}
+            </div>
+
+            {/* Descuento mensual */}
+            <div className="mb-4">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs text-white/40 uppercase tracking-wider">Descuento mensual</p>
+                {!editandoDescuento && (
+                  <button
+                    onClick={() => { setDescuentoInput(seleccionada.descuento_mensual ? String(seleccionada.descuento_mensual) : ''); setEditandoDescuento(true) }}
+                    className="text-xs text-white/40 hover:text-white transition-colors">
+                    Editar
+                  </button>
+                )}
+              </div>
+              {editandoDescuento ? (
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1 flex-1 bg-white/5 border border-white/15 rounded-lg px-3 py-2">
+                    <span className="text-white/40 text-sm">$</span>
+                    <input
+                      type="number" min="0" step="1000" autoFocus
+                      value={descuentoInput}
+                      onChange={e => setDescuentoInput(e.target.value)}
+                      placeholder="0"
+                      className="flex-1 bg-transparent text-white text-sm focus:outline-none placeholder-white/20"
+                    />
+                  </div>
+                  <button onClick={() => guardarDescuento(seleccionada)} disabled={savingDescuento}
+                    className="text-xs bg-[#e91e8c] hover:bg-[#ff3da8] text-white px-3 py-2 rounded-lg disabled:opacity-50 transition-colors">
+                    {savingDescuento ? '...' : 'OK'}
+                  </button>
+                  <button onClick={() => setEditandoDescuento(false)}
+                    className="text-xs text-white/40 hover:text-white px-2 py-2 rounded-lg transition-colors">
+                    ✕
+                  </button>
+                </div>
+              ) : (
+                <div className="bg-white/5 rounded-lg px-4 py-3">
+                  {seleccionada.descuento_mensual ? (
+                    <span className="text-green-400 font-semibold">-${Number(seleccionada.descuento_mensual).toLocaleString('es-CO')}</span>
+                  ) : (
+                    <span className="text-white/30 text-sm">Sin descuento</span>
+                  )}
                 </div>
               )}
             </div>

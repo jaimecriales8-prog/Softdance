@@ -10,7 +10,7 @@ export default async function AlumnasPage() {
   const { data: alumnas } = await supabase
     .from('alumnas')
     .select(`
-      id, nombre, fecha_nacimiento, activa, congelada, codigo_vinculacion,
+      id, nombre, fecha_nacimiento, activa, congelada, codigo_vinculacion, descuento_mensual,
       familias(id, nombre, email, telefono),
       alumna_grupo(activo, grupos(id, nombre, es_elite)),
       alumna_actividad(actividades_extra(id, nombre))
