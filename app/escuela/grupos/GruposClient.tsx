@@ -14,6 +14,7 @@ type Grupo = {
   cupo_maximo: number | null
   precio_mensual: number
   activo: boolean
+  profesores?: string[]
 }
 
 type AlumnaEnGrupo = {
@@ -409,6 +410,7 @@ function GruposTabla({ grupos, onEditar, onToggle, onVerAlumnas, onEliminar, gru
             <th className="text-left text-white/40 text-xs uppercase tracking-wider px-4 py-3">Edades</th>
             <th className="text-left text-white/40 text-xs uppercase tracking-wider px-4 py-3">Cupo</th>
             <th className="text-left text-white/40 text-xs uppercase tracking-wider px-4 py-3">Precio / mes</th>
+            <th className="text-left text-white/40 text-xs uppercase tracking-wider px-4 py-3">Profesor</th>
             <th className="text-center text-white/40 text-xs uppercase tracking-wider px-4 py-3">Activo</th>
             <th className="px-4 py-3"></th>
           </tr>
@@ -428,6 +430,9 @@ function GruposTabla({ grupos, onEditar, onToggle, onVerAlumnas, onEliminar, gru
               <td className="px-4 py-3 text-white/60">{g.cupo_maximo ?? '—'}</td>
               <td className="px-4 py-3 text-white/60">
                 {g.precio_mensual > 0 ? `$${g.precio_mensual.toLocaleString('es-CO')}` : '—'}
+              </td>
+              <td className="px-4 py-3 text-white/60 text-xs">
+                {(g.profesores ?? []).length > 0 ? (g.profesores ?? []).join(', ') : '—'}
               </td>
               <td className="px-4 py-3 text-center" onClick={e => e.stopPropagation()}>
                 <button onClick={() => onToggle(g)}
