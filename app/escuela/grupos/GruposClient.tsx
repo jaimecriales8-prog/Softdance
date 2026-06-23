@@ -15,6 +15,7 @@ type Grupo = {
   precio_mensual: number
   activo: boolean
   profesores?: string[]
+  salones?: string[]
 }
 
 type AlumnaEnGrupo = {
@@ -411,6 +412,7 @@ function GruposTabla({ grupos, onEditar, onToggle, onVerAlumnas, onEliminar, gru
             <th className="text-left text-white/40 text-xs uppercase tracking-wider px-4 py-3">Cupo</th>
             <th className="text-left text-white/40 text-xs uppercase tracking-wider px-4 py-3">Precio / mes</th>
             <th className="text-left text-white/40 text-xs uppercase tracking-wider px-4 py-3">Profesor</th>
+            <th className="text-left text-white/40 text-xs uppercase tracking-wider px-4 py-3">Salón</th>
             <th className="text-center text-white/40 text-xs uppercase tracking-wider px-4 py-3">Activo</th>
             <th className="px-4 py-3"></th>
           </tr>
@@ -433,6 +435,13 @@ function GruposTabla({ grupos, onEditar, onToggle, onVerAlumnas, onEliminar, gru
               </td>
               <td className="px-4 py-3 text-white/60 text-xs">
                 {(g.profesores ?? []).length > 0 ? (g.profesores ?? []).join(', ') : '—'}
+              </td>
+              <td className="px-4 py-3 text-xs">
+                {(g.salones ?? []).length > 0
+                  ? (g.salones ?? []).map(s => (
+                    <span key={s} className="inline-block bg-white/8 text-white/60 px-2 py-0.5 rounded-full mr-1">{s}</span>
+                  ))
+                  : <span className="text-white/30">—</span>}
               </td>
               <td className="px-4 py-3 text-center" onClick={e => e.stopPropagation()}>
                 <button onClick={() => onToggle(g)}
