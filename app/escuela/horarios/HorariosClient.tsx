@@ -42,6 +42,7 @@ export default function HorariosClient({ horarios: inicial, grupos, actividades,
   const [form, setForm] = useState(EMPTY)
   const [editId, setEditId] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
   const [vista, setVista] = useState<'lista' | 'disponibilidad'>('lista')
 
   const supabase = createClient()
@@ -65,6 +66,28 @@ export default function HorariosClient({ horarios: inicial, grupos, actividades,
   async function guardar(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
+
+    // Verificar conflicto de salón
+    if (form.salon) {
+      const dia = parseInt(form.dia_semana)
+      const conflicto = horarios.find(h =>
+        h.id !== editId &&
+        h.salon === form.salon &&
+        h.dia_semana === dia &&
+        h.hora_inicio < form.hora_fin &&
+        h.hora_fin > form.hora_inicio
+      )
+      if (conflicto) {
+        const nombre = conflicto.grupos
+          ? (Array.isArray(conflicto.grupos) ? conflicto.grupos[0] : conflicto.grupos)?.nombre
+          : (Array.isArray(conflicto.actividades_extra) ? conflicto.actividades_extra[0] : conflicto.actividades_extra)?.nombre
+        setError(`El salón ${form.salon} ya está ocupado de ${conflicto.hora_inicio.slice(0,5)} a ${conflicto.hora_fin.slice(0,5)} por ${nombre ?? 'otra clase'}`)
+        setLoading(false)
+        return
+      }
+    }
+
+    setError('')
     const payload = {
       escuela_id: escuelaId,
       grupo_id: form.tipo === 'grupo' ? form.grupo_id : null,
@@ -214,6 +237,7 @@ export default function HorariosClient({ horarios: inicial, grupos, actividades,
                   className="flex-1 border border-white/10 text-white/60 text-sm py-2 rounded-lg hover:bg-white/5 transition-colors">
                   Cancelar
                 </button>
+                {error && <p className="text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg px-3 py-2">{error}</p>}
                 <button type="submit" disabled={loading}
                   className="flex-1 bg-[#e91e8c] hover:bg-[#ff3da8] text-white text-sm py-2 rounded-lg disabled:opacity-50 transition-colors">
                   {loading ? 'Guardando...' : modal === 'crear' ? 'Crear clase' : 'Guardar'}
