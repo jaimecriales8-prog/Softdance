@@ -69,10 +69,16 @@ export default function FamiliasClient({ familias: inicial, escuelaId }: { famil
           <h1 className="text-2xl font-bold text-white">Familias</h1>
           <p className="text-white/40 text-sm mt-0.5">{familias.length} familias registradas</p>
         </div>
-        <button onClick={abrirCrear}
-          className="bg-[#e91e8c] hover:bg-[#ff3da8] text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
-          + Nueva familia
-        </button>
+        <div className="flex gap-2">
+          <Link href="/escuela/familias/invitaciones"
+            className="border border-white/15 hover:bg-white/5 text-white/70 hover:text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
+            🖨 Invitaciones
+          </Link>
+          <button onClick={abrirCrear}
+            className="bg-[#e91e8c] hover:bg-[#ff3da8] text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
+            + Nueva familia
+          </button>
+        </div>
       </div>
 
       {/* Modal crear / editar */}
