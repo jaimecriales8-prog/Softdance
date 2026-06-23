@@ -194,9 +194,12 @@ export default function HorariosClient({ horarios: inicial, grupos, actividades,
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs text-white/50 mb-1">Salón</label>
-                  <input value={form.salon} onChange={e => setForm({ ...form, salon: e.target.value })}
-                    placeholder="Ej: Salón A"
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-[#e91e8c]" />
+                  <select value={form.salon} onChange={e => setForm({ ...form, salon: e.target.value })}
+                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#e91e8c]">
+                    <option value="">Sin asignar</option>
+                    <option value="Beat">Beat</option>
+                    <option value="Movich">Movich</option>
+                  </select>
                 </div>
                 <div>
                   <label className="block text-xs text-white/50 mb-1">Profesora</label>
@@ -275,7 +278,7 @@ export default function HorariosClient({ horarios: inicial, grupos, actividades,
 }
 
 const HORAS = Array.from({ length: 14 }, (_, i) => i + 7) // 7am a 8pm
-const SALONES_DEFAULT = ['Salón A', 'Salón B']
+const SALONES_DEFAULT = ['Beat', 'Movich']
 
 function horaEnRango(hora: number, h: Horario) {
   const inicio = parseInt(h.hora_inicio.slice(0, 2))
