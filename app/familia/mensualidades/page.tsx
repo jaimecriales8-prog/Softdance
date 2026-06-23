@@ -3,6 +3,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 import PagarButton from './PagarButton'
 import PagarMatriculaButton from './PagarMatriculaButton'
 import InfoPagoButton from '../InfoPagoButton'
+import PagarEventoButton from './PagarEventoButton'
 
 const MESES = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
 
@@ -200,13 +201,7 @@ export default async function FamiliaMensualidadesPage() {
                     </div>
                     <div className="flex flex-col items-end gap-2 shrink-0">
                       <p className="text-white font-bold text-xl">${Number(ev.total).toLocaleString('es-CO')}</p>
-                      {!pagado && tieneWompi && proxCuota && (
-                        <button
-                          onClick={() => {}}
-                          className="text-xs bg-[#e91e8c] hover:bg-[#ff3da8] text-white font-medium px-3 py-1.5 rounded-lg transition-colors">
-                          Pagar cuota ${montoCuota.toLocaleString('es-CO')}
-                        </button>
-                      )}
+                      {!pagado && tieneWompi && proxCuota && <PagarEventoButton eventoAlumnaId={ev.id} cuotaNumero={proxCuota.numero} monto={montoCuota} />}
                       {!pagado && !tieneWompi && escuela?.info_pago && <InfoPagoButton info={escuela.info_pago} />}
                     </div>
                   </div>
