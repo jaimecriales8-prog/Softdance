@@ -21,17 +21,20 @@ export async function POST(request: NextRequest) {
   async function verificarFirma(escuelaId: string) {
     const { data: config } = await service
       .from('config_pagos')
-      .select('wompi_integrity_secret')
+      .select('wompi_integrity_secret, wompi_events_key')
       .eq('escuela_id', escuelaId)
       .single()
-    if (!config?.wompi_integrity_secret) return false
+    // Usar events_key para verificar webhook; fallback a integrity_secret para compatibilidad
+    const secret = config?.wompi_events_key || config?.wompi_integrity_secret
+    if (!secret) return false
     const values = properties.map((p: string) => {
       if (p === 'transaction.id') return data.id
       if (p === 'transaction.status') return status
       if (p === 'transaction.amount_in_cents') return amount_in_cents
       return ''
     }).join('')
-    const expected = createHash('sha256').update(values + config.wompi_integrity_secret).digest('hex')
+    const timestamp = String(body?.timestamp ?? '')
+    const expected = createHash('sha256').update(values + timestamp + secret).digest('hex')
     return expected === checksum
   }
 

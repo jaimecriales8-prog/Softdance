@@ -17,7 +17,7 @@ type Escuela = {
 }
 
 type FormData = { nombre: string; ciudad: string; email: string; telefono: string }
-type PagosForm = { wompi_pub_key: string; wompi_priv_key: string; wompi_integrity_secret: string }
+type PagosForm = { wompi_pub_key: string; wompi_priv_key: string; wompi_integrity_secret: string; wompi_events_key: string }
 
 const FIELDS = [
   { key: 'nombre', label: 'Nombre', required: true },
@@ -27,7 +27,7 @@ const FIELDS = [
 ]
 
 const EMPTY_FORM: FormData = { nombre: '', ciudad: '', email: '', telefono: '' }
-const EMPTY_PAGOS: PagosForm = { wompi_pub_key: '', wompi_priv_key: '', wompi_integrity_secret: '' }
+const EMPTY_PAGOS: PagosForm = { wompi_pub_key: '', wompi_priv_key: '', wompi_integrity_secret: '', wompi_events_key: '' }
 
 export default function EscuelasClient({ escuelas: inicial }: { escuelas: Escuela[] }) {
   const [escuelas, setEscuelas] = useState(inicial)
@@ -58,11 +58,11 @@ export default function EscuelasClient({ escuelas: inicial }: { escuelas: Escuel
     // Verificar si ya tiene config
     const { data } = await supabase
       .from('config_pagos')
-      .select('wompi_pub_key, wompi_integrity_secret, activa')
+      .select('wompi_pub_key, wompi_integrity_secret, wompi_events_key, activa')
       .eq('escuela_id', e.id)
       .single()
     if (data) {
-      setPagosForm({ wompi_pub_key: data.wompi_pub_key, wompi_priv_key: '••••••••••••••••', wompi_integrity_secret: data.wompi_integrity_secret ? '••••••••••••••••' : '' })
+      setPagosForm({ wompi_pub_key: data.wompi_pub_key, wompi_priv_key: '••••••••••••••••', wompi_integrity_secret: data.wompi_integrity_secret ? '••••••••••••••••' : '', wompi_events_key: data.wompi_events_key ? '••••••••••••••••' : '' })
       setPagosConfig(prev => ({ ...prev, [e.id]: data.activa }))
     }
     setModal('pagos')
@@ -98,7 +98,7 @@ export default function EscuelasClient({ escuelas: inicial }: { escuelas: Escuel
     e.preventDefault()
     if (!editId) return
     // No guardar si la priv_key es el placeholder
-    if (pagosForm.wompi_priv_key === '••••••••••••••••' && pagosForm.wompi_integrity_secret === '••••••••••••••••') {
+    if (pagosForm.wompi_priv_key === '••••••••••••••••' && pagosForm.wompi_integrity_secret === '••••••••••••••••' && pagosForm.wompi_events_key === '••••••••••••••••') {
       cerrar()
       return
     }
@@ -108,6 +108,7 @@ export default function EscuelasClient({ escuelas: inicial }: { escuelas: Escuel
       wompi_pub_key: pagosForm.wompi_pub_key,
       wompi_priv_key: pagosForm.wompi_priv_key !== '••••••••••••••••' ? pagosForm.wompi_priv_key : undefined,
       ...(pagosForm.wompi_integrity_secret && pagosForm.wompi_integrity_secret !== '••••••••••••••••' ? { wompi_integrity_secret: pagosForm.wompi_integrity_secret } : {}),
+      ...(pagosForm.wompi_events_key && pagosForm.wompi_events_key !== '••••••••••••••••' ? { wompi_events_key: pagosForm.wompi_events_key } : {}),
       activa: true,
     }, { onConflict: 'escuela_id' })
     setPagosConfig(prev => ({ ...prev, [editId]: true }))
@@ -207,6 +208,17 @@ export default function EscuelasClient({ escuelas: inicial }: { escuelas: Escuel
                   placeholder="prod_integrity_..."
                   className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#e91e8c] font-mono"
                 />
+              </div>
+              <div>
+                <label className="block text-xs text-white/50 mb-1">Llave de eventos (prod_events_...)</label>
+                <input
+                  type="password"
+                  value={pagosForm.wompi_events_key}
+                  onChange={e => setPagosForm({ ...pagosForm, wompi_events_key: e.target.value })}
+                  placeholder="prod_events_..."
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#e91e8c] font-mono"
+                />
+                <p className="text-white/30 text-xs mt-1">Requerida para verificar eventos del webhook</p>
               </div>
               <div className="bg-[#e91e8c]/10 border border-[#e91e8c]/20 rounded-lg px-3 py-2 text-xs text-[#e91e8c]">
                 ⚠ Las llaves se guardan encriptadas. El dinero va directo a la cuenta bancaria de la escuela en Wompi.
