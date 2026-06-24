@@ -31,7 +31,9 @@ function gruposActivos(a: Alumna) {
   return a.alumna_grupo.filter(ag => ag.activo).map(ag => ag.grupos)
 }
 
-export default function AlumnasClient({ alumnas, grupos }: { alumnas: Alumna[]; grupos: Grupo[] }) {
+type Familia = { id: string; nombre: string }
+
+export default function AlumnasClient({ alumnas, grupos, familias, escuelaId }: { alumnas: Alumna[]; grupos: Grupo[]; familias: Familia[]; escuelaId: string }) {
   const [busqueda, setBusqueda] = useState('')
   const [filtroGrupo, setFiltroGrupo] = useState('')
   const [filtroEstado, setFiltroEstado] = useState<'todas' | 'activas' | 'sin_familia'>('todas')
@@ -44,6 +46,53 @@ export default function AlumnasClient({ alumnas, grupos }: { alumnas: Alumna[]; 
   const [editandoDescuento, setEditandoDescuento] = useState(false)
   const [descuentoInput, setDescuentoInput] = useState('')
   const [savingDescuento, setSavingDescuento] = useState(false)
+
+  // Modal nueva alumna
+  const [modalCrear, setModalCrear] = useState(false)
+  const [formCrear, setFormCrear] = useState({ nombre: '', familia_id: '', grupo_id: '', fecha_nacimiento: '', documento: '', notas: '' })
+  const [creando, setCreando] = useState(false)
+  const [errorCrear, setErrorCrear] = useState('')
+  const [busquedaFamilia, setBusquedaFamilia] = useState('')
+
+  const familiasFiltradas = familias.filter(f => f.nombre.toLowerCase().includes(busquedaFamilia.toLowerCase()))
+
+  async function crearAlumna(e: React.FormEvent) {
+    e.preventDefault()
+    if (!formCrear.nombre.trim() || !formCrear.familia_id) { setErrorCrear('Nombre y familia son obligatorios'); return }
+    setCreando(true); setErrorCrear('')
+    const res = await fetch('/api/escuela/alumnas', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        nombre: formCrear.nombre.trim(),
+        familia_id: formCrear.familia_id,
+        grupo_id: formCrear.grupo_id || null,
+        fecha_nacimiento: formCrear.fecha_nacimiento || null,
+        documento: formCrear.documento || null,
+        notas: formCrear.notas || null,
+      }),
+    })
+    const data = await res.json()
+    if (!res.ok) { setErrorCrear(data.error ?? 'Error al crear'); setCreando(false); return }
+    // Agregar a la lista local con estructura compatible
+    const nuevaAlumna: Alumna = {
+      id: data.id,
+      nombre: data.nombre,
+      fecha_nacimiento: data.fecha_nacimiento,
+      activa: data.activa ?? true,
+      congelada: data.congelada ?? false,
+      codigo_vinculacion: data.codigo_vinculacion,
+      descuento_mensual: null,
+      familias: familias.find(f => f.id === formCrear.familia_id) ? { id: formCrear.familia_id, nombre: familias.find(f => f.id === formCrear.familia_id)!.nombre, email: '', telefono: null } : null,
+      alumna_grupo: (data.alumna_grupo ?? []).map((ag: any) => ({ activo: ag.activo, grupos: ag.grupos })),
+      alumna_actividad: [],
+    }
+    setLista(prev => [...prev, nuevaAlumna].sort((a, b) => a.nombre.localeCompare(b.nombre)))
+    setModalCrear(false)
+    setFormCrear({ nombre: '', familia_id: '', grupo_id: '', fecha_nacimiento: '', documento: '', notas: '' })
+    setBusquedaFamilia('')
+    setCreando(false)
+  }
 
   async function guardarDescuento(a: Alumna) {
     setSavingDescuento(true)
@@ -128,12 +177,19 @@ export default function AlumnasClient({ alumnas, grupos }: { alumnas: Alumna[]; 
   }
 
   return (
+    <>
     <div className="flex gap-6 h-full">
       {/* Lista */}
       <div className={`flex flex-col min-w-0 transition-all ${seleccionada ? 'w-[55%]' : 'w-full'}`}>
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-white mb-1">Alumnas</h1>
-          <p className="text-white/40 text-sm">{alumnas.length} registradas · {filtradas.length} mostradas</p>
+        <div className="mb-6 flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-white mb-1">Alumnas</h1>
+            <p className="text-white/40 text-sm">{lista.length} registradas · {filtradas.length} mostradas</p>
+          </div>
+          <button onClick={() => setModalCrear(true)}
+            className="shrink-0 bg-[#e91e8c] hover:bg-[#ff3da8] text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
+            + Nueva alumna
+          </button>
         </div>
 
         {/* Filtros */}
@@ -422,5 +478,84 @@ export default function AlumnasClient({ alumnas, grupos }: { alumnas: Alumna[]; 
         </div>
       )}
     </div>
+    {/* Modal nueva alumna */}
+    {modalCrear && (
+      <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+        <div className="bg-[#1a1a2e] border border-white/10 rounded-2xl w-full max-w-md">
+          <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-white/10">
+            <h2 className="text-white font-semibold">Nueva alumna</h2>
+            <button onClick={() => { setModalCrear(false); setErrorCrear('') }} className="text-white/30 hover:text-white text-xl leading-none">×</button>
+          </div>
+          <form onSubmit={crearAlumna} className="p-6 space-y-4">
+            <div>
+              <label className="block text-xs text-white/50 mb-1">Nombre *</label>
+              <input value={formCrear.nombre} onChange={e => setFormCrear({ ...formCrear, nombre: e.target.value })}
+                placeholder="Nombre completo"
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-[#e91e8c]" />
+            </div>
+
+            <div>
+              <label className="block text-xs text-white/50 mb-1">Familia *</label>
+              <input value={busquedaFamilia} onChange={e => { setBusquedaFamilia(e.target.value); setFormCrear({ ...formCrear, familia_id: '' }) }}
+                placeholder="Buscar familia..."
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-[#e91e8c] mb-1" />
+              {busquedaFamilia && !formCrear.familia_id && familiasFiltradas.length > 0 && (
+                <div className="bg-[#0f0f1e] border border-white/10 rounded-lg max-h-36 overflow-y-auto">
+                  {familiasFiltradas.slice(0, 8).map(f => (
+                    <button key={f.id} type="button"
+                      onClick={() => { setFormCrear({ ...formCrear, familia_id: f.id }); setBusquedaFamilia(f.nombre) }}
+                      className="w-full text-left px-3 py-2 text-sm text-white/80 hover:bg-white/5 transition-colors">
+                      {f.nombre}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {formCrear.familia_id && (
+                <p className="text-xs text-green-400 mt-1">✓ {busquedaFamilia}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-xs text-white/50 mb-1">Grupo</label>
+              <select value={formCrear.grupo_id} onChange={e => setFormCrear({ ...formCrear, grupo_id: e.target.value })}
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#e91e8c]">
+                <option value="">Sin grupo</option>
+                {grupos.filter(g => !g.es_elite).map(g => (
+                  <option key={g.id} value={g.id}>{g.nombre}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs text-white/50 mb-1">Fecha de nacimiento</label>
+                <input type="date" value={formCrear.fecha_nacimiento} onChange={e => setFormCrear({ ...formCrear, fecha_nacimiento: e.target.value })}
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#e91e8c]" />
+              </div>
+              <div>
+                <label className="block text-xs text-white/50 mb-1">Documento</label>
+                <input value={formCrear.documento} onChange={e => setFormCrear({ ...formCrear, documento: e.target.value })}
+                  placeholder="CC / TI"
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-[#e91e8c]" />
+              </div>
+            </div>
+
+            {errorCrear && <p className="text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg px-3 py-2">{errorCrear}</p>}
+
+            <div className="flex gap-3 pt-1">
+              <button type="button" onClick={() => { setModalCrear(false); setErrorCrear('') }}
+                className="flex-1 border border-white/10 text-white/60 hover:text-white text-sm py-2 rounded-lg transition-colors">
+                Cancelar
+              </button>
+              <button type="submit" disabled={creando}
+                className="flex-1 bg-[#e91e8c] hover:bg-[#ff3da8] disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors">
+                {creando ? 'Creando...' : 'Crear alumna'}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    )}
+    </>
   )
 }

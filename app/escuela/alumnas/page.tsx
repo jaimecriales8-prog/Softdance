@@ -18,11 +18,10 @@ export default async function AlumnasPage() {
     .eq('escuela_id', escuelaId)
     .order('nombre')
 
-  const { data: grupos } = await supabase
-    .from('grupos')
-    .select('id, nombre, es_elite')
-    .eq('escuela_id', escuelaId)
-    .order('nombre')
+  const [{ data: grupos }, { data: familias }] = await Promise.all([
+    supabase.from('grupos').select('id, nombre, es_elite').eq('escuela_id', escuelaId).order('nombre'),
+    supabase.from('familias').select('id, nombre').eq('escuela_id', escuelaId).eq('activa', true).order('nombre'),
+  ])
 
-  return <AlumnasClient alumnas={(alumnas ?? []) as any} grupos={grupos ?? []} />
+  return <AlumnasClient alumnas={(alumnas ?? []) as any} grupos={grupos ?? []} familias={familias ?? []} escuelaId={escuelaId!} />
 }
