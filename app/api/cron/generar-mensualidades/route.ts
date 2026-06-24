@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
       .from('alumnas')
       .select(`
         id, nombre, familia_id, congelada, descuento_mensual,
-        alumna_grupo(activo, grupos(id, nombre, precio_mensual)),
+        alumna_grupo(activo, tipo_asistencia, grupos(id, nombre, precio_mensual, precio_media)),
         alumna_actividad(activo, actividades_extra(id, nombre, precio, es_recurrente))
       `)
       .eq('escuela_id', escuela.id)
@@ -74,12 +74,18 @@ export async function GET(request: NextRequest) {
 
         const grupos = (alumna.alumna_grupo ?? [])
           .filter((ag: any) => ag.activo)
-          .map((ag: any) => Array.isArray(ag.grupos) ? ag.grupos[0] : ag.grupos)
-          .filter(Boolean)
+          .map((ag: any) => ({
+            grupo: Array.isArray(ag.grupos) ? ag.grupos[0] : ag.grupos,
+            tipo_asistencia: ag.tipo_asistencia ?? 'completo',
+          }))
+          .filter((ag: any) => ag.grupo)
 
-        for (const g of grupos) {
-          lineas.push({ concepto: g.nombre, valor: g.precio_mensual })
-          subtotal += g.precio_mensual
+        for (const { grupo: g, tipo_asistencia } of grupos) {
+          const esMedia = tipo_asistencia === 'media' && g.precio_media != null
+          const valor = esMedia ? g.precio_media : g.precio_mensual
+          const concepto = esMedia ? `${g.nombre} (media asistencia)` : g.nombre
+          lineas.push({ concepto, valor })
+          subtotal += valor
         }
 
         const actividades = (alumna.alumna_actividad ?? [])

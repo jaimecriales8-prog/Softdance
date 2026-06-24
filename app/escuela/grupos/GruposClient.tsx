@@ -13,6 +13,7 @@ type Grupo = {
   es_elite: boolean
   cupo_maximo: number | null
   precio_mensual: number
+  precio_media: number | null
   activo: boolean
   profesores?: string[]
   salones?: string[]
@@ -39,9 +40,10 @@ type FormData = {
   es_elite: boolean
   cupo_maximo: string
   precio_mensual: string
+  precio_media: string
 }
 
-const EMPTY: FormData = { nombre: '', edad_min: '', edad_max: '', descripcion: '', es_elite: false, cupo_maximo: '', precio_mensual: '' }
+const EMPTY: FormData = { nombre: '', edad_min: '', edad_max: '', descripcion: '', es_elite: false, cupo_maximo: '', precio_mensual: '', precio_media: '' }
 
 function calcularEdad(fecha: string) {
   const hoy = new Date()
@@ -67,6 +69,7 @@ export default function GruposClient({ grupos: inicial, escuelaId }: { grupos: G
   const [busqueda, setBusqueda] = useState('')
   const [panelError, setPanelError] = useState('')
   const [agregandoId, setAgregandoId] = useState<string | null>(null)
+  const [tipoAsistencia, setTipoAsistencia] = useState<Record<string, 'completo' | 'media'>>({})
 
   const supabase = createClient()
 
@@ -81,6 +84,7 @@ export default function GruposClient({ grupos: inicial, escuelaId }: { grupos: G
       es_elite: g.es_elite,
       cupo_maximo: g.cupo_maximo?.toString() ?? '',
       precio_mensual: g.precio_mensual.toString(),
+      precio_media: g.precio_media?.toString() ?? '',
     })
     setEditId(g.id)
     setModal('editar')
@@ -97,6 +101,7 @@ export default function GruposClient({ grupos: inicial, escuelaId }: { grupos: G
       es_elite: form.es_elite,
       cupo_maximo: form.cupo_maximo ? parseInt(form.cupo_maximo) : null,
       precio_mensual: parseFloat(form.precio_mensual) || 0,
+      precio_media: form.precio_media ? parseInt(form.precio_media) : null,
     }
   }
 
@@ -162,7 +167,7 @@ export default function GruposClient({ grupos: inicial, escuelaId }: { grupos: G
     const res = await fetch('/api/escuela/grupos/alumnas', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ alumna_id: alumna.id, grupo_id: grupoActivo.id }),
+      body: JSON.stringify({ alumna_id: alumna.id, grupo_id: grupoActivo.id, tipo_asistencia: tipoAsistencia[alumna.id] ?? 'completo' }),
     })
     const data = await res.json()
     setAgregandoId(null)
@@ -246,6 +251,12 @@ export default function GruposClient({ grupos: inicial, escuelaId }: { grupos: G
                     <input type="number" value={form.precio_mensual} onChange={e => setForm({ ...form, precio_mensual: e.target.value })}
                       className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#e91e8c]" />
                   </div>
+                </div>
+                <div>
+                  <label className="block text-xs text-white/50 mb-1">Precio media asistencia (COP) <span className="text-white/20">— opcional</span></label>
+                  <input type="number" value={form.precio_media} onChange={e => setForm({ ...form, precio_media: e.target.value })}
+                    placeholder="Dejar vacío si no aplica"
+                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-[#e91e8c]" />
                 </div>
 
                 <div>
@@ -340,16 +351,25 @@ export default function GruposClient({ grupos: inicial, escuelaId }: { grupos: G
                 ) : (
                   <ul className="divide-y divide-white/5 max-h-96 overflow-y-auto">
                     {disponiblesFiltradas.map(a => (
-                      <li key={a.id} className="flex items-center justify-between px-5 py-3 hover:bg-white/5 transition-colors">
-                        <div>
+                      <li key={a.id} className="flex items-center justify-between px-5 py-3 hover:bg-white/5 transition-colors gap-3">
+                        <div className="flex-1 min-w-0">
                           <p className="text-sm text-white">{a.nombre}</p>
                           <p className="text-xs text-white/40">
                             {a.familias?.nombre ?? 'Sin familia'}
                             {a.fecha_nacimiento ? ` · ${calcularEdad(a.fecha_nacimiento)} años` : ''}
                           </p>
                         </div>
+                        {grupoActivo?.precio_media != null && (
+                          <select
+                            value={tipoAsistencia[a.id] ?? 'completo'}
+                            onChange={e => setTipoAsistencia(prev => ({ ...prev, [a.id]: e.target.value as 'completo' | 'media' }))}
+                            className="text-xs bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-white focus:outline-none focus:border-[#e91e8c]">
+                            <option value="completo">Completo</option>
+                            <option value="media">Media asistencia</option>
+                          </select>
+                        )}
                         <button onClick={() => agregarAlumna(a)} disabled={agregandoId === a.id}
-                          className="text-xs bg-[#e91e8c]/10 text-[#e91e8c] hover:bg-[#e91e8c]/20 px-3 py-1 rounded-lg transition-colors disabled:opacity-50">
+                          className="text-xs bg-[#e91e8c]/10 text-[#e91e8c] hover:bg-[#e91e8c]/20 px-3 py-1 rounded-lg transition-colors disabled:opacity-50 shrink-0">
                           {agregandoId === a.id ? '...' : 'Agregar'}
                         </button>
                       </li>

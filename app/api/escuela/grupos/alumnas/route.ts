@@ -67,8 +67,9 @@ export async function POST(request: NextRequest) {
   const escuelaId = await getEscuelaId(supabase, user.id)
   if (!escuelaId) return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
 
-  const { alumna_id, grupo_id } = await request.json()
+  const { alumna_id, grupo_id, tipo_asistencia } = await request.json()
   if (!alumna_id || !grupo_id) return NextResponse.json({ error: 'Faltan campos' }, { status: 400 })
+  const asistencia = tipo_asistencia === 'media' ? 'media' : 'completo'
 
   // Obtener tipo del grupo destino y cerrar solo el activo del mismo tipo
   const { data: grupoDestino } = await supabase.from('grupos').select('es_elite').eq('id', grupo_id).single()
@@ -111,7 +112,7 @@ export async function POST(request: NextRequest) {
     data = res.data; error = res.error
   } else {
     const res = await supabase.from('alumna_grupo')
-      .insert({ escuela_id: escuelaId, alumna_id, grupo_id, fecha_inicio, activo: true })
+      .insert({ escuela_id: escuelaId, alumna_id, grupo_id, fecha_inicio, activo: true, tipo_asistencia: asistencia })
       .select('id, fecha_inicio, alumnas(id, nombre, fecha_nacimiento, familias(nombre))')
       .single()
     data = res.data; error = res.error
