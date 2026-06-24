@@ -78,7 +78,7 @@ export default function AlumnasClient({ alumnas, grupos, familias, escuelaId }: 
 
   async function crearAlumna(e: React.FormEvent) {
     e.preventDefault()
-    if (!formCrear.nombre.trim() || !formCrear.familia_id) { setErrorCrear('Nombre y familia son obligatorios'); return }
+    if (!formCrear.nombre.trim()) { setErrorCrear('El nombre es obligatorio'); return }
     setCreando(true); setErrorCrear('')
     const res = await fetch('/api/escuela/alumnas', {
       method: 'POST',
