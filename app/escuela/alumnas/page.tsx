@@ -12,7 +12,7 @@ export default async function AlumnasPage() {
     .select(`
       id, nombre, fecha_nacimiento, activa, congelada, codigo_vinculacion, descuento_mensual,
       familias(id, nombre, email, telefono),
-      alumna_grupo(activo, grupos(id, nombre, es_elite)),
+      alumna_grupo(activo, tipo_asistencia, grupos(id, nombre, es_elite)),
       alumna_actividad(actividades_extra(id, nombre))
     `)
     .eq('escuela_id', escuelaId)

@@ -13,7 +13,7 @@ type Alumna = {
   codigo_vinculacion: string | null
   descuento_mensual: number | null
   familias: { id: string; nombre: string; email: string; telefono: string | null } | null
-  alumna_grupo: { activo: boolean; grupos: Grupo }[]
+  alumna_grupo: { activo: boolean; tipo_asistencia?: string; grupos: Grupo }[]
   alumna_actividad: { actividades_extra: { id: string; nombre: string } }[]
 }
 
@@ -362,11 +362,16 @@ export default function AlumnasClient({ alumnas, grupos, familias, actividades, 
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap gap-1">
-                        {gas.map(g => (
-                          <span key={g.id} className="text-xs bg-white/10 text-white/70 px-1.5 py-0.5 rounded">
-                            {g.nombre}{g.es_elite ? ' ⭐' : ''}
-                          </span>
-                        ))}
+                        {gas.map(g => {
+                          const ag = a.alumna_grupo.find(ag => ag.activo && ag.grupos.id === g.id)
+                          const esMedia = ag?.tipo_asistencia === 'media'
+                          return (
+                            <span key={g.id} className="text-xs bg-white/10 text-white/70 px-1.5 py-0.5 rounded flex items-center gap-1">
+                              {g.nombre}{g.es_elite ? ' ⭐' : ''}
+                              {esMedia && <span className="text-white/40">½</span>}
+                            </span>
+                          )
+                        })}
                         {acts.map(aa => (
                           <span key={aa.actividades_extra.id} className="text-xs bg-purple-500/20 text-purple-300 px-1.5 py-0.5 rounded">
                             {aa.actividades_extra.nombre}
