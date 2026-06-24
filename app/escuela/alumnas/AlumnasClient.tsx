@@ -32,8 +32,9 @@ function gruposActivos(a: Alumna) {
 }
 
 type Familia = { id: string; nombre: string }
+type Actividad = { id: string; nombre: string; es_recurrente: boolean }
 
-export default function AlumnasClient({ alumnas, grupos, familias, escuelaId }: { alumnas: Alumna[]; grupos: Grupo[]; familias: Familia[]; escuelaId: string }) {
+export default function AlumnasClient({ alumnas, grupos, familias, actividades, escuelaId }: { alumnas: Alumna[]; grupos: Grupo[]; familias: Familia[]; actividades: Actividad[]; escuelaId: string }) {
   const [busqueda, setBusqueda] = useState('')
   const [filtroGrupo, setFiltroGrupo] = useState('')
   const [filtroEstado, setFiltroEstado] = useState<'todas' | 'activas' | 'sin_familia'>('todas')
@@ -46,6 +47,31 @@ export default function AlumnasClient({ alumnas, grupos, familias, escuelaId }: 
   const [editandoDescuento, setEditandoDescuento] = useState(false)
   const [descuentoInput, setDescuentoInput] = useState('')
   const [savingDescuento, setSavingDescuento] = useState(false)
+  const [togglingActividad, setTogglingActividad] = useState<string | null>(null)
+
+  async function toggleActividad(alumna: Alumna, actividad: Actividad) {
+    setTogglingActividad(actividad.id)
+    const tieneActividad = alumna.alumna_actividad.some(aa => aa.actividades_extra.id === actividad.id)
+    try {
+      if (tieneActividad) {
+        await fetch(`/api/escuela/alumnas/actividades?alumna_id=${alumna.id}&actividad_id=${actividad.id}`, { method: 'DELETE' })
+        const actualizada = { ...alumna, alumna_actividad: alumna.alumna_actividad.filter(aa => aa.actividades_extra.id !== actividad.id) }
+        setLista(prev => prev.map(x => x.id === alumna.id ? actualizada : x))
+        setSeleccionada(actualizada)
+      } else {
+        await fetch('/api/escuela/alumnas/actividades', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ alumna_id: alumna.id, actividad_id: actividad.id }),
+        })
+        const actualizada = { ...alumna, alumna_actividad: [...alumna.alumna_actividad, { actividades_extra: actividad }] }
+        setLista(prev => prev.map(x => x.id === alumna.id ? actualizada : x))
+        setSeleccionada(actualizada)
+      }
+    } finally {
+      setTogglingActividad(null)
+    }
+  }
 
   // Modal nueva alumna
   const [modalCrear, setModalCrear] = useState(false)
@@ -406,6 +432,31 @@ export default function AlumnasClient({ alumnas, grupos, familias, escuelaId }: 
                 )}
               </div>
             </div>
+
+            {/* Actividades extra */}
+            {actividades.length > 0 && (
+              <div className="mb-4">
+                <p className="text-xs text-white/40 uppercase tracking-wider mb-2">Actividades extra</p>
+                <div className="flex flex-wrap gap-2">
+                  {actividades.map(act => {
+                    const tiene = seleccionada.alumna_actividad.some(aa => aa.actividades_extra.id === act.id)
+                    return (
+                      <button key={act.id} type="button"
+                        onClick={() => toggleActividad(seleccionada, act)}
+                        disabled={togglingActividad === act.id}
+                        className={`text-xs px-3 py-1.5 rounded-full border transition-colors disabled:opacity-50 ${
+                          tiene
+                            ? 'bg-purple-500/20 border-purple-500/40 text-purple-300'
+                            : 'bg-white/5 border-white/10 text-white/40 hover:text-white hover:border-white/30'
+                        }`}>
+                        {tiene ? '✓ ' : '+ '}{act.nombre}
+                        {act.es_recurrente ? '' : ' · único'}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Familia */}
             <div className="mb-4">
