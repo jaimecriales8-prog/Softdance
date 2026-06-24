@@ -515,7 +515,7 @@ export default function AlumnasClient({ alumnas, grupos, familias, escuelaId }: 
             </div>
 
             <div>
-              <label className="block text-xs text-white/50 mb-1">Familia *</label>
+              <label className="block text-xs text-white/50 mb-1">Familia <span className="text-white/30">(opcional)</span></label>
               <input value={busquedaFamilia} onChange={e => { setBusquedaFamilia(e.target.value); setFormCrear({ ...formCrear, familia_id: '' }) }}
                 placeholder="Buscar familia..."
                 className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-[#e91e8c] mb-1" />
