@@ -54,7 +54,27 @@ export default function AlumnasClient({ alumnas, grupos, familias, escuelaId }: 
   const [errorCrear, setErrorCrear] = useState('')
   const [busquedaFamilia, setBusquedaFamilia] = useState('')
 
-  const familiasFiltradas = familias.filter(f => f.nombre.toLowerCase().includes(busquedaFamilia.toLowerCase()))
+  const [listaFamilias, setListaFamilias] = useState(familias)
+  const familiasFiltradas = listaFamilias.filter(f => f.nombre.toLowerCase().includes(busquedaFamilia.toLowerCase()))
+
+  async function crearFamiliaYSeleccionar() {
+    const nombre = busquedaFamilia.trim()
+    if (!nombre) return
+    setCreando(true)
+    const res = await fetch('/api/escuela/familias', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nombre }),
+    })
+    const data = await res.json()
+    setCreando(false)
+    if (!res.ok) { setErrorCrear(data.error ?? 'Error al crear familia'); return }
+    const nueva: Familia = { id: data.id, nombre: data.nombre }
+    setListaFamilias(prev => [...prev, nueva].sort((a, b) => a.nombre.localeCompare(b.nombre)))
+    setFormCrear(f => ({ ...f, familia_id: data.id }))
+    setBusquedaFamilia(data.nombre)
+    setErrorCrear('')
+  }
 
   async function crearAlumna(e: React.FormEvent) {
     e.preventDefault()
@@ -499,8 +519,8 @@ export default function AlumnasClient({ alumnas, grupos, familias, escuelaId }: 
               <input value={busquedaFamilia} onChange={e => { setBusquedaFamilia(e.target.value); setFormCrear({ ...formCrear, familia_id: '' }) }}
                 placeholder="Buscar familia..."
                 className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-[#e91e8c] mb-1" />
-              {busquedaFamilia && !formCrear.familia_id && familiasFiltradas.length > 0 && (
-                <div className="bg-[#0f0f1e] border border-white/10 rounded-lg max-h-36 overflow-y-auto">
+              {busquedaFamilia && !formCrear.familia_id && (
+                <div className="bg-[#0f0f1e] border border-white/10 rounded-lg max-h-40 overflow-y-auto">
                   {familiasFiltradas.slice(0, 8).map(f => (
                     <button key={f.id} type="button"
                       onClick={() => { setFormCrear({ ...formCrear, familia_id: f.id }); setBusquedaFamilia(f.nombre) }}
@@ -508,6 +528,12 @@ export default function AlumnasClient({ alumnas, grupos, familias, escuelaId }: 
                       {f.nombre}
                     </button>
                   ))}
+                  {!familiasFiltradas.some(f => f.nombre.toLowerCase() === busquedaFamilia.toLowerCase()) && (
+                    <button type="button" onClick={crearFamiliaYSeleccionar}
+                      className="w-full text-left px-3 py-2 text-sm text-[#e91e8c] hover:bg-white/5 transition-colors border-t border-white/5">
+                      + Crear familia "{busquedaFamilia}"
+                    </button>
+                  )}
                 </div>
               )}
               {formCrear.familia_id && (
