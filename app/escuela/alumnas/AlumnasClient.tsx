@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
 
-type Grupo = { id: string; nombre: string; es_elite: boolean }
+type Grupo = { id: string; nombre: string; es_elite: boolean; precio_media?: number | null }
 type Alumna = {
   id: string
   nombre: string
@@ -49,6 +49,38 @@ export default function AlumnasClient({ alumnas, grupos, familias, actividades, 
   const [savingDescuento, setSavingDescuento] = useState(false)
   const [togglingActividad, setTogglingActividad] = useState<string | null>(null)
   const [togglingGrupoElite, setTogglingGrupoElite] = useState<string | null>(null)
+  const [asignandoGrupo, setAsignandoGrupo] = useState(false)
+  const [grupoSelId, setGrupoSelId] = useState('')
+  const [tipoAsistSel, setTipoAsistSel] = useState<'completo' | 'media'>('completo')
+  const [savingGrupo, setSavingGrupo] = useState(false)
+
+  const gruposNormales = grupos.filter(g => !g.es_elite)
+
+  async function asignarGrupo(alumna: Alumna) {
+    if (!grupoSelId) return
+    setSavingGrupo(true)
+    const res = await fetch('/api/escuela/grupos/alumnas', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ alumna_id: alumna.id, grupo_id: grupoSelId, tipo_asistencia: tipoAsistSel }),
+    })
+    if (res.ok) {
+      const grupo = grupos.find(g => g.id === grupoSelId)!
+      const actualizada = {
+        ...alumna,
+        alumna_grupo: [
+          ...alumna.alumna_grupo.map(ag => ag.grupos.es_elite ? ag : { ...ag, activo: false }),
+          { activo: true, grupos: grupo },
+        ],
+      }
+      setLista(prev => prev.map(x => x.id === alumna.id ? actualizada : x))
+      setSeleccionada(actualizada)
+      setAsignandoGrupo(false)
+      setGrupoSelId('')
+      setTipoAsistSel('completo')
+    }
+    setSavingGrupo(false)
+  }
 
   const gruposElite = grupos.filter(g => g.es_elite)
 
@@ -440,24 +472,68 @@ export default function AlumnasClient({ alumnas, grupos, familias, actividades, 
               {seleccionada.activa && !seleccionada.congelada && <span className="text-xs text-green-400 bg-green-400/10 px-2 py-1 rounded-lg">Activa</span>}
             </div>
 
-            {/* Grupos */}
+            {/* Grupos normales */}
             <div className="mb-4">
-              <p className="text-xs text-white/40 uppercase tracking-wider mb-2">Grupos</p>
-              <div className="flex flex-wrap gap-2">
-                {gruposActivos(seleccionada).map(g => (
-                  <span key={g.id} className="text-sm bg-white/10 text-white px-3 py-1 rounded-lg">
-                    {g.nombre}{g.es_elite ? ' ⭐' : ''}
-                  </span>
-                ))}
-                {seleccionada.alumna_actividad.map(aa => (
-                  <span key={aa.actividades_extra.id} className="text-sm bg-purple-500/20 text-purple-300 px-3 py-1 rounded-lg">
-                    {aa.actividades_extra.nombre}
-                  </span>
-                ))}
-                {gruposActivos(seleccionada).length === 0 && seleccionada.alumna_actividad.length === 0 && (
-                  <span className="text-sm text-white/20">Sin grupo asignado</span>
-                )}
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs text-white/40 uppercase tracking-wider">Grupo</p>
+                <button onClick={() => { setAsignandoGrupo(a => !a); setGrupoSelId(''); setTipoAsistSel('completo') }}
+                  className="text-xs text-white/40 hover:text-white transition-colors">
+                  {asignandoGrupo ? 'Cancelar' : 'Cambiar'}
+                </button>
               </div>
+
+              {/* Grupo actual */}
+              {!asignandoGrupo && (() => {
+                const ga = gruposActivos(seleccionada).filter(g => !g.es_elite)
+                return ga.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {ga.map(g => {
+                      const ag = seleccionada.alumna_grupo.find(ag => ag.activo && ag.grupos.id === g.id) as any
+                      const esMedia = ag?.tipo_asistencia === 'media'
+                      return (
+                        <span key={g.id} className="text-sm bg-white/10 text-white px-3 py-1.5 rounded-lg flex items-center gap-1.5">
+                          {g.nombre}
+                          {esMedia && <span className="text-xs text-white/50 bg-white/10 px-1.5 py-0.5 rounded">½</span>}
+                        </span>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-sm text-white/20">Sin grupo asignado</p>
+                )
+              })()}
+
+              {/* Selector de grupo */}
+              {asignandoGrupo && (
+                <div className="space-y-2">
+                  <select value={grupoSelId} onChange={e => setGrupoSelId(e.target.value)}
+                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#e91e8c]">
+                    <option value="">Seleccionar grupo...</option>
+                    {gruposNormales.map(g => (
+                      <option key={g.id} value={g.id}>{g.nombre}</option>
+                    ))}
+                  </select>
+                  {grupoSelId && (() => {
+                    const g = grupos.find(x => x.id === grupoSelId)
+                    return g?.precio_media != null ? (
+                      <div className="flex gap-2">
+                        <button onClick={() => setTipoAsistSel('completo')}
+                          className={`flex-1 text-xs py-2 rounded-lg border transition-colors ${tipoAsistSel === 'completo' ? 'bg-[#e91e8c]/20 border-[#e91e8c]/40 text-white' : 'bg-white/5 border-white/10 text-white/50 hover:text-white'}`}>
+                          Completo
+                        </button>
+                        <button onClick={() => setTipoAsistSel('media')}
+                          className={`flex-1 text-xs py-2 rounded-lg border transition-colors ${tipoAsistSel === 'media' ? 'bg-[#e91e8c]/20 border-[#e91e8c]/40 text-white' : 'bg-white/5 border-white/10 text-white/50 hover:text-white'}`}>
+                          Media asistencia
+                        </button>
+                      </div>
+                    ) : null
+                  })()}
+                  <button onClick={() => asignarGrupo(seleccionada)} disabled={!grupoSelId || savingGrupo}
+                    className="w-full bg-[#e91e8c] hover:bg-[#ff3da8] disabled:opacity-40 text-white text-xs font-medium py-2 rounded-lg transition-colors">
+                    {savingGrupo ? 'Guardando...' : 'Asignar grupo'}
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Grupos élite */}
