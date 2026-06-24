@@ -179,17 +179,17 @@ export default function AlumnasClient({ alumnas, grupos, familias, actividades, 
     })
     const data = await res.json()
     if (!res.ok) { setErrorCrear(data.error ?? 'Error al crear'); setCreando(false); return }
-    // Agregar a la lista local con estructura compatible
+    const a = data.alumna ?? data
     const nuevaAlumna: Alumna = {
-      id: data.id,
-      nombre: data.nombre,
-      fecha_nacimiento: data.fecha_nacimiento,
-      activa: data.activa ?? true,
-      congelada: data.congelada ?? false,
-      codigo_vinculacion: data.codigo_vinculacion,
+      id: a.id,
+      nombre: a.nombre,
+      fecha_nacimiento: a.fecha_nacimiento,
+      activa: a.activa ?? true,
+      congelada: a.congelada ?? false,
+      codigo_vinculacion: a.codigo_vinculacion,
       descuento_mensual: null,
       familias: familias.find(f => f.id === formCrear.familia_id) ? { id: formCrear.familia_id, nombre: familias.find(f => f.id === formCrear.familia_id)!.nombre, email: '', telefono: null } : null,
-      alumna_grupo: (data.alumna_grupo ?? []).map((ag: any) => ({ activo: ag.activo, grupos: ag.grupos })),
+      alumna_grupo: (a.alumna_grupo ?? []).map((ag: any) => ({ activo: ag.activo, tipo_asistencia: ag.tipo_asistencia, grupos: ag.grupos })),
       alumna_actividad: [],
     }
     setLista(prev => [...prev, nuevaAlumna].sort((a, b) => a.nombre.localeCompare(b.nombre)))
