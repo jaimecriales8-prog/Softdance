@@ -48,6 +48,33 @@ export default function AlumnasClient({ alumnas, grupos, familias, actividades, 
   const [descuentoInput, setDescuentoInput] = useState('')
   const [savingDescuento, setSavingDescuento] = useState(false)
   const [togglingActividad, setTogglingActividad] = useState<string | null>(null)
+  const [togglingGrupoElite, setTogglingGrupoElite] = useState<string | null>(null)
+
+  const gruposElite = grupos.filter(g => g.es_elite)
+
+  async function toggleGrupoElite(alumna: Alumna, grupo: Grupo) {
+    setTogglingGrupoElite(grupo.id)
+    const tiene = alumna.alumna_grupo.some(ag => ag.activo && ag.grupos.id === grupo.id)
+    try {
+      if (tiene) {
+        await fetch(`/api/escuela/grupos/alumnas?alumna_id=${alumna.id}&grupo_id=${grupo.id}`, { method: 'DELETE' })
+        const actualizada = { ...alumna, alumna_grupo: alumna.alumna_grupo.map(ag => ag.grupos.id === grupo.id ? { ...ag, activo: false } : ag) }
+        setLista(prev => prev.map(x => x.id === alumna.id ? actualizada : x))
+        setSeleccionada(actualizada)
+      } else {
+        await fetch('/api/escuela/grupos/alumnas', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ alumna_id: alumna.id, grupo_id: grupo.id }),
+        })
+        const actualizada = { ...alumna, alumna_grupo: [...alumna.alumna_grupo, { activo: true, grupos: grupo }] }
+        setLista(prev => prev.map(x => x.id === alumna.id ? actualizada : x))
+        setSeleccionada(actualizada)
+      }
+    } finally {
+      setTogglingGrupoElite(null)
+    }
+  }
 
   async function toggleActividad(alumna: Alumna, actividad: Actividad) {
     setTogglingActividad(actividad.id)
@@ -432,6 +459,30 @@ export default function AlumnasClient({ alumnas, grupos, familias, actividades, 
                 )}
               </div>
             </div>
+
+            {/* Grupos élite */}
+            {gruposElite.length > 0 && (
+              <div className="mb-4">
+                <p className="text-xs text-white/40 uppercase tracking-wider mb-2">Grupos élite</p>
+                <div className="flex flex-wrap gap-2">
+                  {gruposElite.map(g => {
+                    const tiene = seleccionada.alumna_grupo.some(ag => ag.activo && ag.grupos.id === g.id)
+                    return (
+                      <button key={g.id} type="button"
+                        onClick={() => toggleGrupoElite(seleccionada, g)}
+                        disabled={togglingGrupoElite === g.id}
+                        className={`text-xs px-3 py-1.5 rounded-full border transition-colors disabled:opacity-50 ${
+                          tiene
+                            ? 'bg-yellow-500/20 border-yellow-500/40 text-yellow-300'
+                            : 'bg-white/5 border-white/10 text-white/40 hover:text-white hover:border-white/30'
+                        }`}>
+                        {tiene ? '⭐ ' : '+ '}{g.nombre}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Actividades extra */}
             {actividades.length > 0 && (
