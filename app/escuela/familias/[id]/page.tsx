@@ -22,7 +22,7 @@ export default async function FamiliaDetallePage({ params }: { params: Promise<{
     .from('alumnas')
     .select(`
       id, nombre, documento, fecha_nacimiento, foto_url, activa, congelada, notas, codigo_vinculacion,
-      alumna_grupo(id, fecha_inicio, fecha_fin, activo, grupos(id, nombre, es_elite)),
+      alumna_grupo(id, fecha_inicio, fecha_fin, activo, tipo_asistencia, grupos(id, nombre, es_elite, precio_mensual, precio_media)),
       alumna_actividad(id, actividades_extra(id, nombre, precio, es_recurrente))
     `)
     .eq('familia_id', id)
@@ -31,7 +31,7 @@ export default async function FamiliaDetallePage({ params }: { params: Promise<{
 
   const { data: grupos } = await supabase
     .from('grupos')
-    .select('id, nombre, es_elite, precio_mensual')
+    .select('id, nombre, es_elite, precio_mensual, precio_media')
     .eq('escuela_id', escuelaId)
     .eq('activo', true)
     .order('es_elite').order('nombre')

@@ -4,9 +4,9 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 
-type Grupo = { id: string; nombre: string; es_elite: boolean; precio_mensual: number }
-type GrupoBase = { id: string; nombre: string; es_elite: boolean }
-type AlumnaGrupo = { id: string; fecha_inicio: string; fecha_fin: string | null; activo: boolean; grupos: GrupoBase | GrupoBase[] }
+type Grupo = { id: string; nombre: string; es_elite: boolean; precio_mensual: number; precio_media?: number | null }
+type GrupoBase = { id: string; nombre: string; es_elite: boolean; precio_mensual?: number; precio_media?: number | null }
+type AlumnaGrupo = { id: string; fecha_inicio: string; fecha_fin: string | null; activo: boolean; tipo_asistencia?: string; grupos: GrupoBase | GrupoBase[] }
 type ActividadExtra = { id: string; nombre: string; precio: number; es_recurrente: boolean }
 type AlumnaActividad = { id: string; actividades_extra: ActividadExtra | ActividadExtra[] }
 type Concepto = { nombre: string; valor: number }
@@ -493,8 +493,11 @@ export default function FamiliaDetalleClient({
 
             const valorMensual = (() => {
                 const porGrupos = gasActivos.reduce((sum, ag) => {
-                  const g = grupos.find(g => g.id === ag.grupos.id)
-                  return sum + (g?.precio_mensual ?? 0)
+                  const grupoBase = Array.isArray(ag.grupos) ? ag.grupos[0] : ag.grupos
+                  const g = grupos.find(g => g.id === grupoBase?.id)
+                  const esMedia = ag.tipo_asistencia === 'media' && (g?.precio_media ?? grupoBase?.precio_media) != null
+                  const precio = esMedia ? (g?.precio_media ?? grupoBase?.precio_media ?? 0) : (g?.precio_mensual ?? 0)
+                  return sum + precio
                 }, 0)
                 const porActividades = actsAlumna
                   .filter(act => act.es_recurrente)
