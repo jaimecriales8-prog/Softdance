@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
   if (!escuelaId) return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
 
   const { nombre, documento, fecha_nacimiento, notas, grupo_id, familia_id, descuento_mensual } = await request.json()
-  if (!nombre || !familia_id) return NextResponse.json({ error: 'Faltan campos requeridos' }, { status: 400 })
+  if (!nombre) return NextResponse.json({ error: 'El nombre es obligatorio' }, { status: 400 })
 
   const codigo_vinculacion = await codigoUnico(supabase, escuelaId)
 
