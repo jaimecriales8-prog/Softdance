@@ -8,16 +8,32 @@ type Actividad = {
   precio: number; es_recurrente: boolean; activa: boolean
 }
 
+type Alumna = {
+  id: string; nombre: string; fecha_nacimiento: string | null
+  alumna_actividad: { actividad_id: string }[]
+}
+
 const EMPTY = { nombre: '', descripcion: '', precio: '', es_recurrente: true }
 
-export default function ActividadesClient({ actividades: inicial, escuelaId }: {
-  actividades: Actividad[]; escuelaId: string
+function calcularEdad(fecha: string) {
+  const hoy = new Date(); const nac = new Date(fecha)
+  let edad = hoy.getFullYear() - nac.getFullYear()
+  if (hoy < new Date(hoy.getFullYear(), nac.getMonth(), nac.getDate())) edad--
+  return edad
+}
+
+export default function ActividadesClient({ actividades: inicial, alumnas: todasAlumnas, escuelaId }: {
+  actividades: Actividad[]; alumnas: Alumna[]; escuelaId: string
 }) {
   const [actividades, setActividades] = useState(inicial)
+  const [alumnas, setAlumnas] = useState(todasAlumnas)
   const [modal, setModal] = useState<'crear' | 'editar' | null>(null)
   const [form, setForm] = useState(EMPTY)
   const [editId, setEditId] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [seleccionada, setSeleccionada] = useState<Actividad | null>(null)
+  const [busqueda, setBusqueda] = useState('')
+  const [togglingAlumna, setTogglingAlumna] = useState<string | null>(null)
 
   const supabase = createClient()
 
@@ -41,18 +57,23 @@ export default function ActividadesClient({ actividades: inicial, escuelaId }: {
     if (modal === 'crear') {
       const { data, error } = await supabase.from('actividades_extra')
         .insert({ ...payload, activa: true }).select().single()
-      if (!error && data) setActividades([...actividades, data])
+      if (!error && data) setActividades([...actividades, data].sort((a, b) => a.nombre.localeCompare(b.nombre)))
     } else if (editId) {
       const { data, error } = await supabase.from('actividades_extra')
         .update(payload).eq('id', editId).select().single()
-      if (!error && data) setActividades(actividades.map(a => a.id === editId ? data : a))
+      if (!error && data) {
+        setActividades(actividades.map(a => a.id === editId ? data : a))
+        if (seleccionada?.id === editId) setSeleccionada(data)
+      }
     }
     cerrar(); setLoading(false)
   }
 
   async function toggleActiva(a: Actividad) {
     await supabase.from('actividades_extra').update({ activa: !a.activa }).eq('id', a.id)
-    setActividades(actividades.map(x => x.id === a.id ? { ...x, activa: !a.activa } : x))
+    const updated = { ...a, activa: !a.activa }
+    setActividades(actividades.map(x => x.id === a.id ? updated : x))
+    if (seleccionada?.id === a.id) setSeleccionada(updated)
   }
 
   async function eliminarActividad(a: Actividad) {
@@ -60,131 +81,212 @@ export default function ActividadesClient({ actividades: inicial, escuelaId }: {
     const { error } = await supabase.from('horarios').delete().eq('actividad_id', a.id)
     if (error) { alert('No se pudo eliminar la actividad: ' + error.message); return }
     const { error: errorAct } = await supabase.from('actividades_extra').delete().eq('id', a.id)
-    if (errorAct) {
-      alert('No se pudo eliminar: la actividad tiene alumnas asignadas o historial. Desactívala en su lugar.')
-      return
-    }
+    if (errorAct) { alert('No se pudo eliminar: la actividad tiene alumnas asignadas o historial. Desactívala en su lugar.'); return }
     setActividades(actividades.filter(x => x.id !== a.id))
+    if (seleccionada?.id === a.id) setSeleccionada(null)
+  }
+
+  async function toggleAlumna(alumna: Alumna) {
+    if (!seleccionada) return
+    setTogglingAlumna(alumna.id)
+    const tiene = alumna.alumna_actividad.some(aa => aa.actividad_id === seleccionada.id)
+    try {
+      if (tiene) {
+        await fetch(`/api/escuela/alumnas/actividades?alumna_id=${alumna.id}&actividad_id=${seleccionada.id}`, { method: 'DELETE' })
+        setAlumnas(prev => prev.map(a => a.id === alumna.id
+          ? { ...a, alumna_actividad: a.alumna_actividad.filter(aa => aa.actividad_id !== seleccionada.id) }
+          : a))
+      } else {
+        await fetch('/api/escuela/alumnas/actividades', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ alumna_id: alumna.id, actividad_id: seleccionada.id }),
+        })
+        setAlumnas(prev => prev.map(a => a.id === alumna.id
+          ? { ...a, alumna_actividad: [...a.alumna_actividad, { actividad_id: seleccionada.id }] }
+          : a))
+      }
+    } finally {
+      setTogglingAlumna(null)
+    }
   }
 
   const activas = actividades.filter(a => a.activa)
   const inactivas = actividades.filter(a => !a.activa)
 
+  const alumnasFiltradas = alumnas.filter(a =>
+    a.nombre.toLowerCase().includes(busqueda.toLowerCase())
+  )
+  const conActividad = seleccionada ? alumnas.filter(a => a.alumna_actividad.some(aa => aa.actividad_id === seleccionada.id)) : []
+
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-white">Actividades extra</h1>
-          <p className="text-white/40 text-sm mt-0.5">{activas.length} activas · {inactivas.length} inactivas</p>
+    <div className="flex gap-6">
+      {/* Lista actividades */}
+      <div className={`flex flex-col min-w-0 transition-all ${seleccionada ? 'w-[55%]' : 'w-full'}`}>
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-2xl font-bold text-white">Actividades extra</h1>
+            <p className="text-white/40 text-sm mt-0.5">{activas.length} activas · {inactivas.length} inactivas</p>
+          </div>
+          <button onClick={abrirCrear}
+            className="bg-[#e91e8c] hover:bg-[#ff3da8] text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
+            + Nueva actividad
+          </button>
         </div>
-        <button onClick={abrirCrear}
-          className="bg-[#e91e8c] hover:bg-[#ff3da8] text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
-          + Nueva actividad
-        </button>
+
+        {/* Modal */}
+        {modal && (
+          <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+            <div className="bg-[#111] border border-white/10 rounded-2xl p-6 w-full max-w-md">
+              <h2 className="text-lg font-semibold text-white mb-4">
+                {modal === 'crear' ? 'Nueva actividad extra' : 'Editar actividad'}
+              </h2>
+              <form onSubmit={guardar} className="space-y-3">
+                <div>
+                  <label className="block text-xs text-white/50 mb-1">Nombre *</label>
+                  <input required value={form.nombre} onChange={e => setForm({ ...form, nombre: e.target.value })}
+                    placeholder="Ej: Clases de teatro, Acrobacia..."
+                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-[#e91e8c]" />
+                </div>
+                <div>
+                  <label className="block text-xs text-white/50 mb-1">Descripción</label>
+                  <textarea value={form.descripcion} onChange={e => setForm({ ...form, descripcion: e.target.value })} rows={2}
+                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#e91e8c] resize-none" />
+                </div>
+                <div>
+                  <label className="block text-xs text-white/50 mb-1">Precio (COP) *</label>
+                  <input type="number" required value={form.precio} onChange={e => setForm({ ...form, precio: e.target.value })}
+                    placeholder="0"
+                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-[#e91e8c]" />
+                </div>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={form.es_recurrente}
+                    onChange={e => setForm({ ...form, es_recurrente: e.target.checked })}
+                    className="accent-[#e91e8c]" />
+                  <span className="text-sm text-white/70">Cobro mensual recurrente</span>
+                </label>
+                <p className="text-xs text-white/30">
+                  {form.es_recurrente ? 'Se suma a la mensualidad cada mes.' : 'Pago único al asignar la actividad.'}
+                </p>
+                <div className="flex gap-2 pt-2">
+                  <button type="button" onClick={cerrar}
+                    className="flex-1 border border-white/10 text-white/60 text-sm py-2 rounded-lg hover:bg-white/5 transition-colors">
+                    Cancelar
+                  </button>
+                  <button type="submit" disabled={loading}
+                    className="flex-1 bg-[#e91e8c] hover:bg-[#ff3da8] text-white text-sm py-2 rounded-lg disabled:opacity-50 transition-colors">
+                    {loading ? 'Guardando...' : modal === 'crear' ? 'Crear' : 'Guardar'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {actividades.length === 0 ? (
+          <div className="bg-white/5 border border-white/10 rounded-xl px-4 py-12 text-center text-white/30 text-sm">
+            No hay actividades extra creadas aún
+          </div>
+        ) : (
+          <div className="bg-white/5 border border-white/10 rounded-xl overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-white/10">
+                  <th className="text-left text-white/40 text-xs uppercase tracking-wider px-4 py-3">Actividad</th>
+                  <th className="text-left text-white/40 text-xs uppercase tracking-wider px-4 py-3">Precio</th>
+                  {!seleccionada && <th className="text-left text-white/40 text-xs uppercase tracking-wider px-4 py-3">Tipo</th>}
+                  {!seleccionada && <th className="text-left text-white/40 text-xs uppercase tracking-wider px-4 py-3">Alumnas</th>}
+                  <th className="text-center text-white/40 text-xs uppercase tracking-wider px-4 py-3">Activa</th>
+                  <th className="px-4 py-3"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {actividades.map((a, i) => {
+                  const numAlumnas = alumnas.filter(al => al.alumna_actividad.some(aa => aa.actividad_id === a.id)).length
+                  return (
+                    <tr key={a.id}
+                      onClick={() => setSeleccionada(sel => sel?.id === a.id ? null : a)}
+                      className={`${i < actividades.length - 1 ? 'border-b border-white/5' : ''} cursor-pointer transition-colors ${seleccionada?.id === a.id ? 'bg-[#e91e8c]/5 border-l-2 border-l-[#e91e8c]' : 'hover:bg-white/5'}`}>
+                      <td className="px-4 py-3">
+                        <p className="text-white font-medium">{a.nombre}</p>
+                        {a.descripcion && <p className="text-white/40 text-xs">{a.descripcion}</p>}
+                      </td>
+                      <td className="px-4 py-3 text-white/70">${a.precio.toLocaleString('es-CO')}</td>
+                      {!seleccionada && (
+                        <td className="px-4 py-3">
+                          <span className={`text-xs px-2 py-0.5 rounded-full ${a.es_recurrente ? 'bg-white/10 text-white/50' : 'bg-[#e91e8c]/10 text-[#e91e8c]'}`}>
+                            {a.es_recurrente ? 'Mensual' : 'Único'}
+                          </span>
+                        </td>
+                      )}
+                      {!seleccionada && (
+                        <td className="px-4 py-3 text-white/50 text-xs">{numAlumnas} {numAlumnas === 1 ? 'alumna' : 'alumnas'}</td>
+                      )}
+                      <td className="px-4 py-3 text-center" onClick={e => e.stopPropagation()}>
+                        <button onClick={() => toggleActiva(a)}
+                          className={`w-10 h-5 rounded-full transition-colors ${a.activa ? 'bg-[#e91e8c]' : 'bg-white/20'}`}>
+                          <span className={`block w-4 h-4 bg-white rounded-full mx-auto transition-transform ${a.activa ? 'translate-x-2.5' : '-translate-x-2.5'}`} />
+                        </button>
+                      </td>
+                      <td className="px-4 py-3 text-right" onClick={e => e.stopPropagation()}>
+                        <button onClick={() => abrirEditar(a)}
+                          className="text-xs text-white/40 hover:text-white transition-colors px-2 py-1 rounded hover:bg-white/5">Editar</button>
+                        <button onClick={() => eliminarActividad(a)}
+                          className="text-xs text-white/40 hover:text-red-400 transition-colors px-2 py-1 rounded hover:bg-red-500/10">Eliminar</button>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
-      {/* Modal */}
-      {modal && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-          <div className="bg-[#111] border border-white/10 rounded-2xl p-6 w-full max-w-md">
-            <h2 className="text-lg font-semibold text-white mb-4">
-              {modal === 'crear' ? 'Nueva actividad extra' : 'Editar actividad'}
-            </h2>
-            <form onSubmit={guardar} className="space-y-3">
-              <div>
-                <label className="block text-xs text-white/50 mb-1">Nombre *</label>
-                <input required value={form.nombre} onChange={e => setForm({ ...form, nombre: e.target.value })}
-                  placeholder="Ej: Clases de teatro, Acrobacia..."
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-[#e91e8c]" />
-              </div>
-              <div>
-                <label className="block text-xs text-white/50 mb-1">Descripción</label>
-                <textarea value={form.descripcion} onChange={e => setForm({ ...form, descripcion: e.target.value })} rows={2}
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#e91e8c] resize-none" />
-              </div>
-              <div>
-                <label className="block text-xs text-white/50 mb-1">Precio (COP) *</label>
-                <input type="number" required value={form.precio} onChange={e => setForm({ ...form, precio: e.target.value })}
-                  placeholder="0"
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-[#e91e8c]" />
-              </div>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" checked={form.es_recurrente}
-                  onChange={e => setForm({ ...form, es_recurrente: e.target.checked })}
-                  className="accent-[#e91e8c]" />
-                <span className="text-sm text-white/70">Cobro mensual recurrente</span>
-              </label>
-              <p className="text-xs text-white/30">
-                {form.es_recurrente ? 'Se suma a la mensualidad cada mes.' : 'Pago único al asignar la actividad.'}
-              </p>
+      {/* Panel alumnas */}
+      {seleccionada && (
+        <div className="w-[45%] shrink-0">
+          <div className="bg-white/5 border border-white/10 rounded-xl p-5 sticky top-8">
+            <div className="flex items-center justify-between mb-1">
+              <h2 className="text-white font-bold">{seleccionada.nombre}</h2>
+              <button onClick={() => { setSeleccionada(null); setBusqueda('') }} className="text-white/30 hover:text-white text-xl leading-none">×</button>
+            </div>
+            <p className="text-white/40 text-xs mb-4">
+              {conActividad.length} alumna{conActividad.length !== 1 ? 's' : ''} asignada{conActividad.length !== 1 ? 's' : ''} · ${seleccionada.precio.toLocaleString('es-CO')} {seleccionada.es_recurrente ? '/ mes' : 'único'}
+            </p>
 
-              <div className="flex gap-2 pt-2">
-                <button type="button" onClick={cerrar}
-                  className="flex-1 border border-white/10 text-white/60 text-sm py-2 rounded-lg hover:bg-white/5 transition-colors">
-                  Cancelar
-                </button>
-                <button type="submit" disabled={loading}
-                  className="flex-1 bg-[#e91e8c] hover:bg-[#ff3da8] text-white text-sm py-2 rounded-lg disabled:opacity-50 transition-colors">
-                  {loading ? 'Guardando...' : modal === 'crear' ? 'Crear' : 'Guardar'}
-                </button>
-              </div>
-            </form>
+            <input value={busqueda} onChange={e => setBusqueda(e.target.value)}
+              placeholder="Buscar alumna..."
+              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-[#e91e8c] mb-3" />
+
+            <div className="space-y-1 max-h-[60vh] overflow-y-auto pr-1">
+              {alumnasFiltradas.map(a => {
+                const tiene = a.alumna_actividad.some(aa => aa.actividad_id === seleccionada.id)
+                return (
+                  <div key={a.id}
+                    onClick={() => toggleAlumna(a)}
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-colors ${
+                      togglingAlumna === a.id ? 'opacity-50' : ''
+                    } ${tiene ? 'bg-purple-500/10 hover:bg-purple-500/15' : 'hover:bg-white/5'}`}>
+                    <div className={`w-5 h-5 rounded flex items-center justify-center shrink-0 border transition-colors ${
+                      tiene ? 'bg-purple-500 border-purple-500' : 'border-white/20'
+                    }`}>
+                      {tiene && <span className="text-white text-xs">✓</span>}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-white text-sm font-medium truncate">{a.nombre}</p>
+                      {a.fecha_nacimiento && (
+                        <p className="text-white/40 text-xs">{calcularEdad(a.fecha_nacimiento)} años</p>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+              {alumnasFiltradas.length === 0 && (
+                <p className="text-white/30 text-sm text-center py-6">Sin resultados</p>
+              )}
+            </div>
           </div>
-        </div>
-      )}
-
-      {/* Lista */}
-      {actividades.length === 0 ? (
-        <div className="bg-white/5 border border-white/10 rounded-xl px-4 py-12 text-center text-white/30 text-sm">
-          No hay actividades extra creadas aún
-        </div>
-      ) : (
-        <div className="bg-white/5 border border-white/10 rounded-xl overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-white/10">
-                <th className="text-left text-white/40 text-xs uppercase tracking-wider px-4 py-3">Actividad</th>
-                <th className="text-left text-white/40 text-xs uppercase tracking-wider px-4 py-3">Precio</th>
-                <th className="text-left text-white/40 text-xs uppercase tracking-wider px-4 py-3">Tipo</th>
-                <th className="text-center text-white/40 text-xs uppercase tracking-wider px-4 py-3">Activa</th>
-                <th className="px-4 py-3"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {actividades.map((a, i) => (
-                <tr key={a.id} className={`${i < actividades.length - 1 ? 'border-b border-white/5' : ''} hover:bg-white/5 transition-colors`}>
-                  <td className="px-4 py-3">
-                    <p className="text-white font-medium">{a.nombre}</p>
-                    {a.descripcion && <p className="text-white/40 text-xs">{a.descripcion}</p>}
-                  </td>
-                  <td className="px-4 py-3 text-white/70">
-                    ${a.precio.toLocaleString('es-CO')}
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${a.es_recurrente ? 'bg-white/10 text-white/50' : 'bg-[#e91e8c]/10 text-[#e91e8c]'}`}>
-                      {a.es_recurrente ? 'Mensual' : 'Único'}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <button onClick={() => toggleActiva(a)}
-                      className={`w-10 h-5 rounded-full transition-colors ${a.activa ? 'bg-[#e91e8c]' : 'bg-white/20'}`}>
-                      <span className={`block w-4 h-4 bg-white rounded-full mx-auto transition-transform ${a.activa ? 'translate-x-2.5' : '-translate-x-2.5'}`} />
-                    </button>
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <button onClick={() => abrirEditar(a)}
-                      className="text-xs text-white/40 hover:text-white transition-colors px-2 py-1 rounded hover:bg-white/5">
-                      Editar
-                    </button>
-                    <button onClick={() => eliminarActividad(a)}
-                      className="text-xs text-white/40 hover:text-red-400 transition-colors px-2 py-1 rounded hover:bg-red-500/10">
-                      Eliminar
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
         </div>
       )}
     </div>
