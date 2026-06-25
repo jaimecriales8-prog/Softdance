@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
       .from('alumnas')
       .select(`
         id, nombre, familia_id, congelada, descuento_mensual,
-        alumna_grupo(activo, tipo_asistencia, grupos(id, nombre, precio_mensual, precio_media)),
+        alumna_grupo(activo, tipo_asistencia, grupos(id, nombre, precio_mensual, precio_media, precio_cuarto)),
         alumna_actividad(activo, actividades_extra(id, nombre, precio, es_recurrente))
       `)
       .eq('escuela_id', escuela.id)
@@ -82,8 +82,9 @@ export async function GET(request: NextRequest) {
 
         for (const { grupo: g, tipo_asistencia } of grupos) {
           const esMedia = tipo_asistencia === 'media' && g.precio_media != null
-          const valor = esMedia ? g.precio_media : g.precio_mensual
-          const concepto = esMedia ? `${g.nombre} (media asistencia)` : g.nombre
+          const esCuarto = tipo_asistencia === 'cuarto' && g.precio_cuarto != null
+          const valor = esCuarto ? g.precio_cuarto : esMedia ? g.precio_media : g.precio_mensual
+          const concepto = esCuarto ? `${g.nombre} (¼ asistencia)` : esMedia ? `${g.nombre} (½ asistencia)` : g.nombre
           lineas.push({ concepto, valor })
           subtotal += valor
         }

@@ -14,6 +14,7 @@ type Grupo = {
   cupo_maximo: number | null
   precio_mensual: number
   precio_media: number | null
+  precio_cuarto: number | null
   activo: boolean
   profesores?: string[]
   salones?: string[]
@@ -41,9 +42,10 @@ type FormData = {
   cupo_maximo: string
   precio_mensual: string
   precio_media: string
+  precio_cuarto: string
 }
 
-const EMPTY: FormData = { nombre: '', edad_min: '', edad_max: '', descripcion: '', es_elite: false, cupo_maximo: '', precio_mensual: '', precio_media: '' }
+const EMPTY: FormData = { nombre: '', edad_min: '', edad_max: '', descripcion: '', es_elite: false, cupo_maximo: '', precio_mensual: '', precio_media: '', precio_cuarto: '' }
 
 function calcularEdad(fecha: string) {
   const hoy = new Date()
@@ -69,7 +71,7 @@ export default function GruposClient({ grupos: inicial, escuelaId }: { grupos: G
   const [busqueda, setBusqueda] = useState('')
   const [panelError, setPanelError] = useState('')
   const [agregandoId, setAgregandoId] = useState<string | null>(null)
-  const [tipoAsistencia, setTipoAsistencia] = useState<Record<string, 'completo' | 'media'>>({})
+  const [tipoAsistencia, setTipoAsistencia] = useState<Record<string, 'completo' | 'media' | 'cuarto'>>({})
 
   const supabase = createClient()
 
@@ -85,6 +87,7 @@ export default function GruposClient({ grupos: inicial, escuelaId }: { grupos: G
       cupo_maximo: g.cupo_maximo?.toString() ?? '',
       precio_mensual: g.precio_mensual.toString(),
       precio_media: g.precio_media?.toString() ?? '',
+      precio_cuarto: g.precio_cuarto?.toString() ?? '',
     })
     setEditId(g.id)
     setModal('editar')
@@ -102,6 +105,7 @@ export default function GruposClient({ grupos: inicial, escuelaId }: { grupos: G
       cupo_maximo: form.cupo_maximo ? parseInt(form.cupo_maximo) : null,
       precio_mensual: parseFloat(form.precio_mensual) || 0,
       precio_media: form.precio_media ? parseInt(form.precio_media) : null,
+      precio_cuarto: form.precio_cuarto ? parseInt(form.precio_cuarto) : null,
     }
   }
 
@@ -252,11 +256,19 @@ export default function GruposClient({ grupos: inicial, escuelaId }: { grupos: G
                       className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#e91e8c]" />
                   </div>
                 </div>
-                <div>
-                  <label className="block text-xs text-white/50 mb-1">Precio media asistencia (COP) <span className="text-white/20">— opcional</span></label>
-                  <input type="number" value={form.precio_media} onChange={e => setForm({ ...form, precio_media: e.target.value })}
-                    placeholder="Dejar vacío si no aplica"
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-[#e91e8c]" />
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs text-white/50 mb-1">Precio ½ asistencia <span className="text-white/20">— opcional</span></label>
+                    <input type="number" value={form.precio_media} onChange={e => setForm({ ...form, precio_media: e.target.value })}
+                      placeholder="Vacío si no aplica"
+                      className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-[#e91e8c]" />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-white/50 mb-1">Precio ¼ asistencia <span className="text-white/20">— opcional</span></label>
+                    <input type="number" value={form.precio_cuarto} onChange={e => setForm({ ...form, precio_cuarto: e.target.value })}
+                      placeholder="Vacío si no aplica"
+                      className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-[#e91e8c]" />
+                  </div>
                 </div>
 
                 <div>
@@ -359,13 +371,14 @@ export default function GruposClient({ grupos: inicial, escuelaId }: { grupos: G
                             {a.fecha_nacimiento ? ` · ${calcularEdad(a.fecha_nacimiento)} años` : ''}
                           </p>
                         </div>
-                        {grupoActivo?.precio_media != null && (
+                        {(grupoActivo?.precio_media != null || grupoActivo?.precio_cuarto != null) && (
                           <select
                             value={tipoAsistencia[a.id] ?? 'completo'}
-                            onChange={e => setTipoAsistencia(prev => ({ ...prev, [a.id]: e.target.value as 'completo' | 'media' }))}
+                            onChange={e => setTipoAsistencia(prev => ({ ...prev, [a.id]: e.target.value as 'completo' | 'media' | 'cuarto' }))}
                             className="text-xs bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-white focus:outline-none focus:border-[#e91e8c]">
                             <option value="completo">Completo</option>
-                            <option value="media">Media asistencia</option>
+                            {grupoActivo?.precio_media != null && <option value="media">½ asistencia</option>}
+                            {grupoActivo?.precio_cuarto != null && <option value="cuarto">¼ asistencia</option>}
                           </select>
                         )}
                         <button onClick={() => agregarAlumna(a)} disabled={agregandoId === a.id}

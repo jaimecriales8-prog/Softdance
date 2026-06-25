@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
 
-type Grupo = { id: string; nombre: string; es_elite: boolean; precio_media?: number | null }
+type Grupo = { id: string; nombre: string; es_elite: boolean; precio_media?: number | null; precio_cuarto?: number | null }
 type Alumna = {
   id: string
   nombre: string
@@ -51,7 +51,7 @@ export default function AlumnasClient({ alumnas, grupos, familias, actividades, 
   const [togglingGrupoElite, setTogglingGrupoElite] = useState<string | null>(null)
   const [asignandoGrupo, setAsignandoGrupo] = useState(false)
   const [grupoSelId, setGrupoSelId] = useState('')
-  const [tipoAsistSel, setTipoAsistSel] = useState<'completo' | 'media'>('completo')
+  const [tipoAsistSel, setTipoAsistSel] = useState<'completo' | 'media' | 'cuarto'>('completo')
   const [savingGrupo, setSavingGrupo] = useState(false)
 
   const gruposNormales = grupos.filter(g => !g.es_elite)
@@ -364,11 +364,12 @@ export default function AlumnasClient({ alumnas, grupos, familias, actividades, 
                       <div className="flex flex-wrap gap-1">
                         {gas.map(g => {
                           const ag = a.alumna_grupo.find(ag => ag.activo && ag.grupos.id === g.id)
-                          const esMedia = ag?.tipo_asistencia === 'media'
+                          const ta = ag?.tipo_asistencia
                           return (
                             <span key={g.id} className="text-xs bg-white/10 text-white/70 px-1.5 py-0.5 rounded flex items-center gap-1">
                               {g.nombre}{g.es_elite ? ' ⭐' : ''}
-                              {esMedia && <span className="text-white/40">½</span>}
+                              {ta === 'media' && <span className="text-white/40">½</span>}
+                              {ta === 'cuarto' && <span className="text-white/40">¼</span>}
                             </span>
                           )
                         })}
@@ -494,11 +495,12 @@ export default function AlumnasClient({ alumnas, grupos, familias, actividades, 
                   <div className="flex flex-wrap gap-2">
                     {ga.map(g => {
                       const ag = seleccionada.alumna_grupo.find(ag => ag.activo && ag.grupos.id === g.id) as any
-                      const esMedia = ag?.tipo_asistencia === 'media'
+                      const ta = ag?.tipo_asistencia
                       return (
                         <span key={g.id} className="text-sm bg-white/10 text-white px-3 py-1.5 rounded-lg flex items-center gap-1.5">
                           {g.nombre}
-                          {esMedia && <span className="text-xs text-white/50 bg-white/10 px-1.5 py-0.5 rounded">½</span>}
+                          {ta === 'media' && <span className="text-xs text-white/50 bg-white/10 px-1.5 py-0.5 rounded">½</span>}
+                          {ta === 'cuarto' && <span className="text-xs text-white/50 bg-white/10 px-1.5 py-0.5 rounded">¼</span>}
                         </span>
                       )
                     })}
@@ -520,16 +522,25 @@ export default function AlumnasClient({ alumnas, grupos, familias, actividades, 
                   </select>
                   {grupoSelId && (() => {
                     const g = grupos.find(x => x.id === grupoSelId)
-                    return g?.precio_media != null ? (
+                    const tieneOpciones = g?.precio_media != null || g?.precio_cuarto != null
+                    return tieneOpciones ? (
                       <div className="flex gap-2">
                         <button onClick={() => setTipoAsistSel('completo')}
                           className={`flex-1 text-xs py-2 rounded-lg border transition-colors ${tipoAsistSel === 'completo' ? 'bg-[#e91e8c]/20 border-[#e91e8c]/40 text-white' : 'bg-white/5 border-white/10 text-white/50 hover:text-white'}`}>
                           Completo
                         </button>
-                        <button onClick={() => setTipoAsistSel('media')}
-                          className={`flex-1 text-xs py-2 rounded-lg border transition-colors ${tipoAsistSel === 'media' ? 'bg-[#e91e8c]/20 border-[#e91e8c]/40 text-white' : 'bg-white/5 border-white/10 text-white/50 hover:text-white'}`}>
-                          Media asistencia
-                        </button>
+                        {g?.precio_media != null && (
+                          <button onClick={() => setTipoAsistSel('media')}
+                            className={`flex-1 text-xs py-2 rounded-lg border transition-colors ${tipoAsistSel === 'media' ? 'bg-[#e91e8c]/20 border-[#e91e8c]/40 text-white' : 'bg-white/5 border-white/10 text-white/50 hover:text-white'}`}>
+                            ½ asistencia
+                          </button>
+                        )}
+                        {g?.precio_cuarto != null && (
+                          <button onClick={() => setTipoAsistSel('cuarto')}
+                            className={`flex-1 text-xs py-2 rounded-lg border transition-colors ${tipoAsistSel === 'cuarto' ? 'bg-[#e91e8c]/20 border-[#e91e8c]/40 text-white' : 'bg-white/5 border-white/10 text-white/50 hover:text-white'}`}>
+                            ¼ asistencia
+                          </button>
+                        )}
                       </div>
                     ) : null
                   })()}

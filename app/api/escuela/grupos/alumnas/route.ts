@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
 
   const { alumna_id, grupo_id, tipo_asistencia } = await request.json()
   if (!alumna_id || !grupo_id) return NextResponse.json({ error: 'Faltan campos' }, { status: 400 })
-  const asistencia = tipo_asistencia === 'media' ? 'media' : 'completo'
+  const asistencia = tipo_asistencia === 'media' ? 'media' : tipo_asistencia === 'cuarto' ? 'cuarto' : 'completo'
 
   // Obtener tipo del grupo destino y cerrar solo el activo del mismo tipo
   const { data: grupoDestino } = await supabase.from('grupos').select('es_elite').eq('id', grupo_id).single()
