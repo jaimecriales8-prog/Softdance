@@ -32,7 +32,7 @@ function gruposActivos(a: Alumna) {
 }
 
 type Familia = { id: string; nombre: string }
-type Actividad = { id: string; nombre: string; es_recurrente: boolean }
+type Actividad = { id: string; nombre: string; es_recurrente: boolean; precio_media?: number | null; precio_cuarto?: number | null }
 
 export default function AlumnasClient({ alumnas, grupos, familias, actividades, escuelaId }: { alumnas: Alumna[]; grupos: Grupo[]; familias: Familia[]; actividades: Actividad[]; escuelaId: string }) {
   const [busqueda, setBusqueda] = useState('')
@@ -48,6 +48,7 @@ export default function AlumnasClient({ alumnas, grupos, familias, actividades, 
   const [descuentoInput, setDescuentoInput] = useState('')
   const [savingDescuento, setSavingDescuento] = useState(false)
   const [togglingActividad, setTogglingActividad] = useState<string | null>(null)
+  const [tipoAsistAct, setTipoAsistAct] = useState<Record<string, 'completo' | 'media' | 'cuarto'>>({})
   const [togglingGrupoElite, setTogglingGrupoElite] = useState<string | null>(null)
   const [asignandoGrupo, setAsignandoGrupo] = useState(false)
   const [grupoSelId, setGrupoSelId] = useState('')
@@ -118,12 +119,13 @@ export default function AlumnasClient({ alumnas, grupos, familias, actividades, 
         setLista(prev => prev.map(x => x.id === alumna.id ? actualizada : x))
         setSeleccionada(actualizada)
       } else {
+        const ta = tipoAsistAct[actividad.id] ?? 'completo'
         await fetch('/api/escuela/alumnas/actividades', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ alumna_id: alumna.id, actividad_id: actividad.id }),
+          body: JSON.stringify({ alumna_id: alumna.id, actividad_id: actividad.id, tipo_asistencia: ta }),
         })
-        const actualizada = { ...alumna, alumna_actividad: [...alumna.alumna_actividad, { actividades_extra: actividad }] }
+        const actualizada = { ...alumna, alumna_actividad: [...alumna.alumna_actividad, { actividades_extra: actividad, tipo_asistencia: ta }] }
         setLista(prev => prev.map(x => x.id === alumna.id ? actualizada : x))
         setSeleccionada(actualizada)
       }
@@ -588,18 +590,33 @@ export default function AlumnasClient({ alumnas, grupos, familias, actividades, 
                 <div className="flex flex-wrap gap-2">
                   {actividades.map(act => {
                     const tiene = seleccionada.alumna_actividad.some(aa => aa.actividades_extra.id === act.id)
+                    const taActual = (seleccionada.alumna_actividad.find(aa => aa.actividades_extra.id === act.id) as any)?.tipo_asistencia
+                    const tieneOpciones = !tiene && (act.precio_media != null || act.precio_cuarto != null)
                     return (
-                      <button key={act.id} type="button"
-                        onClick={() => toggleActividad(seleccionada, act)}
-                        disabled={togglingActividad === act.id}
-                        className={`text-xs px-3 py-1.5 rounded-full border transition-colors disabled:opacity-50 ${
-                          tiene
-                            ? 'bg-purple-500/20 border-purple-500/40 text-purple-300'
-                            : 'bg-white/5 border-white/10 text-white/40 hover:text-white hover:border-white/30'
-                        }`}>
-                        {tiene ? '✓ ' : '+ '}{act.nombre}
-                        {act.es_recurrente ? '' : ' · único'}
-                      </button>
+                      <div key={act.id} className="flex items-center gap-1">
+                        <button type="button"
+                          onClick={() => toggleActividad(seleccionada, act)}
+                          disabled={togglingActividad === act.id}
+                          className={`text-xs px-3 py-1.5 rounded-full border transition-colors disabled:opacity-50 ${
+                            tiene
+                              ? 'bg-purple-500/20 border-purple-500/40 text-purple-300'
+                              : 'bg-white/5 border-white/10 text-white/40 hover:text-white hover:border-white/30'
+                          }`}>
+                          {tiene ? '✓ ' : '+ '}{act.nombre}
+                          {!act.es_recurrente ? ' · único' : ''}
+                          {tiene && taActual && taActual !== 'completo' && ` ${taActual === 'media' ? '½' : '¼'}`}
+                        </button>
+                        {tieneOpciones && (
+                          <select
+                            value={tipoAsistAct[act.id] ?? 'completo'}
+                            onChange={e => setTipoAsistAct(prev => ({ ...prev, [act.id]: e.target.value as any }))}
+                            className="text-xs bg-white/5 border border-white/10 rounded-lg px-1.5 py-1 text-white/50 focus:outline-none focus:border-purple-500">
+                            <option value="completo">Completo</option>
+                            {act.precio_media != null && <option value="media">½</option>}
+                            {act.precio_cuarto != null && <option value="cuarto">¼</option>}
+                          </select>
+                        )}
+                      </div>
                     )
                   })}
                 </div>
