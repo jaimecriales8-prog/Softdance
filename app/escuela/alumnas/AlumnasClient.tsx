@@ -114,7 +114,11 @@ export default function AlumnasClient({ alumnas, grupos, familias, actividades, 
     const tieneActividad = alumna.alumna_actividad.some(aa => aa.actividades_extra.id === actividad.id)
     try {
       if (tieneActividad) {
-        await fetch(`/api/escuela/alumnas/actividades?alumna_id=${alumna.id}&actividad_id=${actividad.id}`, { method: 'DELETE' })
+        await fetch('/api/escuela/alumnas/actividades', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ alumna_id: alumna.id, actividad_id: actividad.id }),
+        })
         const actualizada = { ...alumna, alumna_actividad: alumna.alumna_actividad.filter(aa => aa.actividades_extra.id !== actividad.id) }
         setLista(prev => prev.map(x => x.id === alumna.id ? actualizada : x))
         setSeleccionada(actualizada)
