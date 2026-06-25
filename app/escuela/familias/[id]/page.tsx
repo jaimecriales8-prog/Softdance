@@ -23,7 +23,7 @@ export default async function FamiliaDetallePage({ params }: { params: Promise<{
     .select(`
       id, nombre, documento, fecha_nacimiento, foto_url, activa, congelada, notas, codigo_vinculacion,
       alumna_grupo(id, fecha_inicio, fecha_fin, activo, tipo_asistencia, grupos(id, nombre, es_elite, precio_mensual, precio_media, precio_cuarto)),
-      alumna_actividad(id, actividades_extra(id, nombre, precio, es_recurrente))
+      alumna_actividad(id, tipo_asistencia, actividades_extra(id, nombre, precio, precio_media, precio_cuarto, es_recurrente))
     `)
     .eq('familia_id', id)
     .eq('escuela_id', escuelaId)

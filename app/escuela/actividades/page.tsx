@@ -10,7 +10,7 @@ export default async function ActividadesPage() {
   const [{ data: actividades }, { data: alumnas }] = await Promise.all([
     supabase.from('actividades_extra').select('*').eq('escuela_id', escuelaId).order('nombre'),
     supabase.from('alumnas')
-      .select('id, nombre, fecha_nacimiento, alumna_actividad(actividad_id)')
+      .select('id, nombre, fecha_nacimiento, alumna_actividad(actividad_id, tipo_asistencia)')
       .eq('escuela_id', escuelaId)
       .eq('activa', true)
       .order('nombre'),

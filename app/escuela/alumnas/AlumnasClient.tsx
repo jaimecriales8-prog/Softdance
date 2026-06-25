@@ -373,11 +373,16 @@ export default function AlumnasClient({ alumnas, grupos, familias, actividades, 
                             </span>
                           )
                         })}
-                        {acts.map(aa => (
-                          <span key={aa.actividades_extra.id} className="text-xs bg-purple-500/20 text-purple-300 px-1.5 py-0.5 rounded">
-                            {aa.actividades_extra.nombre}
-                          </span>
-                        ))}
+                        {acts.map(aa => {
+                          const ta = (aa as any).tipo_asistencia
+                          return (
+                            <span key={aa.actividades_extra.id} className="text-xs bg-purple-500/20 text-purple-300 px-1.5 py-0.5 rounded flex items-center gap-1">
+                              {aa.actividades_extra.nombre}
+                              {ta === 'media' && <span className="text-purple-400/60">½</span>}
+                              {ta === 'cuarto' && <span className="text-purple-400/60">¼</span>}
+                            </span>
+                          )
+                        })}
                         {gas.length === 0 && acts.length === 0 && (
                           <span className="text-xs text-white/20">Sin grupo</span>
                         )}

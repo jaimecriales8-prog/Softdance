@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
       .select(`
         id, nombre, familia_id, congelada, descuento_mensual,
         alumna_grupo(activo, tipo_asistencia, grupos(id, nombre, precio_mensual, precio_media, precio_cuarto)),
-        alumna_actividad(activo, actividades_extra(id, nombre, precio, es_recurrente))
+        alumna_actividad(activo, tipo_asistencia, actividades_extra(id, nombre, precio, precio_media, precio_cuarto, es_recurrente))
       `)
       .eq('escuela_id', escuela.id)
       .eq('activa', true)
@@ -91,12 +91,19 @@ export async function GET(request: NextRequest) {
 
         const actividades = (alumna.alumna_actividad ?? [])
           .filter((aa: any) => aa.activo !== false)
-          .map((aa: any) => Array.isArray(aa.actividades_extra) ? aa.actividades_extra[0] : aa.actividades_extra)
-          .filter((a: any) => a?.es_recurrente)
+          .map((aa: any) => ({
+            act: Array.isArray(aa.actividades_extra) ? aa.actividades_extra[0] : aa.actividades_extra,
+            tipo_asistencia: aa.tipo_asistencia ?? 'completo',
+          }))
+          .filter((aa: any) => aa.act?.es_recurrente)
 
-        for (const a of actividades) {
-          lineas.push({ concepto: a.nombre, valor: a.precio })
-          subtotal += a.precio
+        for (const { act: a, tipo_asistencia } of actividades) {
+          const esMedia = tipo_asistencia === 'media' && a.precio_media != null
+          const esCuarto = tipo_asistencia === 'cuarto' && a.precio_cuarto != null
+          const valor = esCuarto ? a.precio_cuarto : esMedia ? a.precio_media : a.precio
+          const concepto = esCuarto ? `${a.nombre} (¼)` : esMedia ? `${a.nombre} (½)` : a.nombre
+          lineas.push({ concepto, valor })
+          subtotal += valor
         }
 
         if (lineas.length > 0) {

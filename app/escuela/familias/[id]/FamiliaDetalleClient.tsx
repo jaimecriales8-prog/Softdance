@@ -7,8 +7,8 @@ import { createClient } from '@/lib/supabase/client'
 type Grupo = { id: string; nombre: string; es_elite: boolean; precio_mensual: number; precio_media?: number | null; precio_cuarto?: number | null }
 type GrupoBase = { id: string; nombre: string; es_elite: boolean; precio_mensual?: number; precio_media?: number | null; precio_cuarto?: number | null }
 type AlumnaGrupo = { id: string; fecha_inicio: string; fecha_fin: string | null; activo: boolean; tipo_asistencia?: string; grupos: GrupoBase | GrupoBase[] }
-type ActividadExtra = { id: string; nombre: string; precio: number; es_recurrente: boolean }
-type AlumnaActividad = { id: string; actividades_extra: ActividadExtra | ActividadExtra[] }
+type ActividadExtra = { id: string; nombre: string; precio: number; precio_media?: number | null; precio_cuarto?: number | null; es_recurrente: boolean }
+type AlumnaActividad = { id: string; tipo_asistencia?: string; actividades_extra: ActividadExtra | ActividadExtra[] }
 type Concepto = { nombre: string; valor: number }
 type Evento = { id: string; nombre: string; fecha: string | null; num_cuotas: number; conceptos: Concepto[] }
 type EventoAlumnaRef = { evento_id: string; alumna_id: string; id: string }
@@ -500,9 +500,17 @@ export default function FamiliaDetalleClient({
                   const precio = esCuarto ? (g?.precio_cuarto ?? grupoBase?.precio_cuarto ?? 0) : esMedia ? (g?.precio_media ?? grupoBase?.precio_media ?? 0) : (g?.precio_mensual ?? 0)
                   return sum + precio
                 }, 0)
-                const porActividades = actsAlumna
-                  .filter(act => act.es_recurrente)
-                  .reduce((sum, act) => sum + act.precio, 0)
+                const porActividades = (a.alumna_actividad ?? [])
+                  .map((aa: any) => ({
+                    act: Array.isArray(aa.actividades_extra) ? aa.actividades_extra[0] : aa.actividades_extra,
+                    tipo_asistencia: aa.tipo_asistencia ?? 'completo',
+                  }))
+                  .filter((aa: any) => aa.act?.es_recurrente)
+                  .reduce((sum: number, { act, tipo_asistencia }: any) => {
+                    const esMedia = tipo_asistencia === 'media' && act.precio_media != null
+                    const esCuarto = tipo_asistencia === 'cuarto' && act.precio_cuarto != null
+                    return sum + (esCuarto ? act.precio_cuarto : esMedia ? act.precio_media : act.precio)
+                  }, 0)
                 return porGrupos + porActividades
               })()
 

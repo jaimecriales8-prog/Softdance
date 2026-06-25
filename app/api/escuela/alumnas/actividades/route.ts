@@ -16,18 +16,19 @@ export async function POST(request: NextRequest) {
   const escuelaId = await getEscuelaId(supabase, user.id)
   if (!escuelaId) return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
 
-  const { alumna_id, actividad_id } = await request.json()
+  const { alumna_id, actividad_id, tipo_asistencia } = await request.json()
   if (!alumna_id || !actividad_id) return NextResponse.json({ error: 'Faltan campos' }, { status: 400 })
+  const asistencia = tipo_asistencia === 'media' ? 'media' : tipo_asistencia === 'cuarto' ? 'cuarto' : 'completo'
 
   const fecha_inicio = new Date().toISOString().split('T')[0]
 
   const { data, error } = await supabase
     .from('alumna_actividad')
     .upsert(
-      { escuela_id: escuelaId, alumna_id, actividad_id, activa: true, fecha_inicio },
+      { escuela_id: escuelaId, alumna_id, actividad_id, activa: true, fecha_inicio, tipo_asistencia: asistencia },
       { onConflict: 'alumna_id,actividad_id,fecha_inicio' }
     )
-    .select('id, actividades_extra(id, nombre, precio, es_recurrente)')
+    .select('id, actividades_extra(id, nombre, precio, precio_media, precio_cuarto, es_recurrente)')
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })

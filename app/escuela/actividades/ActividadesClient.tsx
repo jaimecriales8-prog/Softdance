@@ -5,15 +5,16 @@ import { createClient } from '@/lib/supabase/client'
 
 type Actividad = {
   id: string; nombre: string; descripcion: string | null
-  precio: number; es_recurrente: boolean; activa: boolean
+  precio: number; precio_media: number | null; precio_cuarto: number | null
+  es_recurrente: boolean; activa: boolean
 }
 
 type Alumna = {
   id: string; nombre: string; fecha_nacimiento: string | null
-  alumna_actividad: { actividad_id: string }[]
+  alumna_actividad: { actividad_id: string; tipo_asistencia?: string }[]
 }
 
-const EMPTY = { nombre: '', descripcion: '', precio: '', es_recurrente: true }
+const EMPTY = { nombre: '', descripcion: '', precio: '', precio_media: '', precio_cuarto: '', es_recurrente: true }
 
 function calcularEdad(fecha: string) {
   const hoy = new Date(); const nac = new Date(fecha)
@@ -34,12 +35,13 @@ export default function ActividadesClient({ actividades: inicial, alumnas: todas
   const [seleccionada, setSeleccionada] = useState<Actividad | null>(null)
   const [busqueda, setBusqueda] = useState('')
   const [togglingAlumna, setTogglingAlumna] = useState<string | null>(null)
+  const [tipoAsistencia, setTipoAsistencia] = useState<Record<string, 'completo' | 'media' | 'cuarto'>>({})
 
   const supabase = createClient()
 
   function abrirCrear() { setForm(EMPTY); setEditId(null); setModal('crear') }
   function abrirEditar(a: Actividad) {
-    setForm({ nombre: a.nombre, descripcion: a.descripcion ?? '', precio: a.precio.toString(), es_recurrente: a.es_recurrente })
+    setForm({ nombre: a.nombre, descripcion: a.descripcion ?? '', precio: a.precio.toString(), precio_media: a.precio_media?.toString() ?? '', precio_cuarto: a.precio_cuarto?.toString() ?? '', es_recurrente: a.es_recurrente })
     setEditId(a.id); setModal('editar')
   }
   function cerrar() { setModal(null); setEditId(null) }
@@ -52,6 +54,8 @@ export default function ActividadesClient({ actividades: inicial, alumnas: todas
       nombre: form.nombre,
       descripcion: form.descripcion || null,
       precio: parseFloat(form.precio) || 0,
+      precio_media: form.precio_media ? parseInt(form.precio_media) : null,
+      precio_cuarto: form.precio_cuarto ? parseInt(form.precio_cuarto) : null,
       es_recurrente: form.es_recurrente,
     }
     if (modal === 'crear') {
@@ -97,13 +101,14 @@ export default function ActividadesClient({ actividades: inicial, alumnas: todas
           ? { ...a, alumna_actividad: a.alumna_actividad.filter(aa => aa.actividad_id !== seleccionada.id) }
           : a))
       } else {
+        const ta = tipoAsistencia[alumna.id] ?? 'completo'
         await fetch('/api/escuela/alumnas/actividades', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ alumna_id: alumna.id, actividad_id: seleccionada.id }),
+          body: JSON.stringify({ alumna_id: alumna.id, actividad_id: seleccionada.id, tipo_asistencia: ta }),
         })
         setAlumnas(prev => prev.map(a => a.id === alumna.id
-          ? { ...a, alumna_actividad: [...a.alumna_actividad, { actividad_id: seleccionada.id }] }
+          ? { ...a, alumna_actividad: [...a.alumna_actividad, { actividad_id: seleccionada.id, tipo_asistencia: ta }] }
           : a))
       }
     } finally {
@@ -118,6 +123,7 @@ export default function ActividadesClient({ actividades: inicial, alumnas: todas
     a.nombre.toLowerCase().includes(busqueda.toLowerCase())
   )
   const conActividad = seleccionada ? alumnas.filter(a => a.alumna_actividad.some(aa => aa.actividad_id === seleccionada.id)) : []
+  const tieneOpciones = seleccionada && (seleccionada.precio_media != null || seleccionada.precio_cuarto != null)
 
   return (
     <div className="flex gap-6">
@@ -154,10 +160,24 @@ export default function ActividadesClient({ actividades: inicial, alumnas: todas
                     className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#e91e8c] resize-none" />
                 </div>
                 <div>
-                  <label className="block text-xs text-white/50 mb-1">Precio (COP) *</label>
+                  <label className="block text-xs text-white/50 mb-1">Precio completo (COP) *</label>
                   <input type="number" required value={form.precio} onChange={e => setForm({ ...form, precio: e.target.value })}
                     placeholder="0"
                     className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-[#e91e8c]" />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs text-white/50 mb-1">Precio ½ <span className="text-white/20">— opcional</span></label>
+                    <input type="number" value={form.precio_media} onChange={e => setForm({ ...form, precio_media: e.target.value })}
+                      placeholder="Vacío si no aplica"
+                      className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-[#e91e8c]" />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-white/50 mb-1">Precio ¼ <span className="text-white/20">— opcional</span></label>
+                    <input type="number" value={form.precio_cuarto} onChange={e => setForm({ ...form, precio_cuarto: e.target.value })}
+                      placeholder="Vacío si no aplica"
+                      className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-[#e91e8c]" />
+                  </div>
                 </div>
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input type="checkbox" checked={form.es_recurrente}
@@ -211,7 +231,11 @@ export default function ActividadesClient({ actividades: inicial, alumnas: todas
                         <p className="text-white font-medium">{a.nombre}</p>
                         {a.descripcion && <p className="text-white/40 text-xs">{a.descripcion}</p>}
                       </td>
-                      <td className="px-4 py-3 text-white/70">${a.precio.toLocaleString('es-CO')}</td>
+                      <td className="px-4 py-3 text-white/70">
+                        <span>${a.precio.toLocaleString('es-CO')}</span>
+                        {a.precio_media != null && <span className="text-white/30 text-xs ml-1">· ½${a.precio_media.toLocaleString('es-CO')}</span>}
+                        {a.precio_cuarto != null && <span className="text-white/30 text-xs ml-1">· ¼${a.precio_cuarto.toLocaleString('es-CO')}</span>}
+                      </td>
                       {!seleccionada && (
                         <td className="px-4 py-3">
                           <span className={`text-xs px-2 py-0.5 rounded-full ${a.es_recurrente ? 'bg-white/10 text-white/50' : 'bg-[#e91e8c]/10 text-[#e91e8c]'}`}>
@@ -262,23 +286,43 @@ export default function ActividadesClient({ actividades: inicial, alumnas: todas
             <div className="space-y-1 max-h-[60vh] overflow-y-auto pr-1">
               {alumnasFiltradas.map(a => {
                 const tiene = a.alumna_actividad.some(aa => aa.actividad_id === seleccionada.id)
+                const taActual = a.alumna_actividad.find(aa => aa.actividad_id === seleccionada.id)?.tipo_asistencia
                 return (
                   <div key={a.id}
-                    onClick={() => toggleAlumna(a)}
-                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-colors ${
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
                       togglingAlumna === a.id ? 'opacity-50' : ''
-                    } ${tiene ? 'bg-purple-500/10 hover:bg-purple-500/15' : 'hover:bg-white/5'}`}>
-                    <div className={`w-5 h-5 rounded flex items-center justify-center shrink-0 border transition-colors ${
-                      tiene ? 'bg-purple-500 border-purple-500' : 'border-white/20'
-                    }`}>
-                      {tiene && <span className="text-white text-xs">✓</span>}
+                    } ${tiene ? 'bg-purple-500/10' : 'hover:bg-white/5'}`}>
+                    <div onClick={() => toggleAlumna(a)} className="cursor-pointer flex items-center gap-3 flex-1 min-w-0">
+                      <div className={`w-5 h-5 rounded flex items-center justify-center shrink-0 border transition-colors ${
+                        tiene ? 'bg-purple-500 border-purple-500' : 'border-white/20'
+                      }`}>
+                        {tiene && <span className="text-white text-xs">✓</span>}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-white text-sm font-medium truncate">{a.nombre}</p>
+                        {a.fecha_nacimiento && (
+                          <p className="text-white/40 text-xs">{calcularEdad(a.fecha_nacimiento)} años</p>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-white text-sm font-medium truncate">{a.nombre}</p>
-                      {a.fecha_nacimiento && (
-                        <p className="text-white/40 text-xs">{calcularEdad(a.fecha_nacimiento)} años</p>
-                      )}
-                    </div>
+                    {/* Selector de tipo si no está asignada y la actividad tiene precios parciales */}
+                    {!tiene && tieneOpciones && (
+                      <select
+                        value={tipoAsistencia[a.id] ?? 'completo'}
+                        onChange={e => setTipoAsistencia(prev => ({ ...prev, [a.id]: e.target.value as any }))}
+                        onClick={e => e.stopPropagation()}
+                        className="text-xs bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-white focus:outline-none focus:border-[#e91e8c] shrink-0">
+                        <option value="completo">Completo</option>
+                        {seleccionada.precio_media != null && <option value="media">½</option>}
+                        {seleccionada.precio_cuarto != null && <option value="cuarto">¼</option>}
+                      </select>
+                    )}
+                    {/* Badge del tipo actual si ya está asignada */}
+                    {tiene && taActual && taActual !== 'completo' && (
+                      <span className="text-xs text-white/40 bg-white/10 px-1.5 py-0.5 rounded shrink-0">
+                        {taActual === 'media' ? '½' : '¼'}
+                      </span>
+                    )}
                   </div>
                 )
               })}
